@@ -1,0 +1,43 @@
+name: facilitajud
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: facilitajud
+      POSTGRES_USER: facilitajud
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U facilitajud -d facilitajud"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DATABASE_URL: ""
+      PORT: 8080
+      DEMO_DOCKER_LOOPBACK: "true"
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8080"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+  python:
+    profiles: [integrations]
+    build: ./integrations
+    environment:
+      JUDIT_ENABLED: ${JUDIT_ENABLED:-false}
+    ports:
+      - "127.0.0.1:8001:8001"
+volumes:
+  postgres_data:
+  app_storage:
