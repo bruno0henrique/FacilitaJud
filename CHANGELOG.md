@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-10-06
+
+- Exclui dependências locais, configurações privadas e caches do envio à Vercel.
+- Reconstrói o cache de providers dentro da imagem Docker sem referências a dependências de desenvolvimento.
+- Banco Neon preparado com as migrations e configurações de produção vinculadas à Vercel.
+
 ## 0.1.0 — 2026-10-06
 
 - Primeira versão Laravel do FacilitaJud, preservando sidebar, tipografia Sora e paleta pastel da referência Lovable.

@@ -18,7 +18,9 @@ FROM base AS backend
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --prefer-dist --no-interaction --no-scripts --no-autoloader
 COPY . .
-RUN composer dump-autoload --no-dev --optimize --no-scripts && php artisan package:discover --ansi
+RUN rm -f /app/bootstrap/cache/*.php \
+    && composer dump-autoload --no-dev --optimize --no-scripts \
+    && php artisan package:discover --ansi
 
 FROM base AS runtime
 COPY --from=backend /app /app
