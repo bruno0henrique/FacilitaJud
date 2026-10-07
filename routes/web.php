@@ -19,6 +19,7 @@ Route::middleware(WorkspaceAccess::class)->group(function (): void {
     Route::post('/api/v1/neo/chat', [NeoController::class, 'chat'])->middleware('throttle:20,1');
     Route::get('/reunioes/gravar/{id}', [MeetingController::class, 'window'])->name('meetings.record');
     Route::post('/api/v1/meetings/consent', [MeetingController::class, 'consent']);
+    Route::get('/api/v1/meetings/{id}/recordings', [MeetingController::class, 'listRecordings']);
     Route::post('/api/v1/meetings/{id}/recordings', [MeetingController::class, 'start']);
     Route::post('/api/v1/meeting-recordings/{id}/chunks', [MeetingController::class, 'chunk']);
     Route::post('/api/v1/meeting-recordings/{id}/finish', [MeetingController::class, 'finish']);

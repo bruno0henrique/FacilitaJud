@@ -67,7 +67,7 @@ class MeetingController extends Controller
         $meeting = $this->appointments($request)->where('id', $id)->first();
         abort_unless($meeting, 404);
 
-        return view('meeting-window', ['meeting' => $meeting, 'actor' => $request->attributes->get('actor')]);
+        return view('meeting-window', ['meeting' => $meeting, 'actor' => $request->attributes->get('actor'), 'meetingUrl' => route('workspace', ['module' => 'reunioes', 'meeting' => $id, 'page' => max(1, $request->integer('page', 1))])]);
     }
 
     public function start(Request $request, int $id): JsonResponse
@@ -116,18 +116,33 @@ class MeetingController extends Controller
         return response()->json(['message' => 'Trecho salvo.']);
     }
 
+    public function listRecordings(Request $request, int $id): JsonResponse
+    {
+        $this->access($request);
+        $meeting = $this->appointments($request)->where('id', $id)->first();
+        abort_unless($meeting, 404);
+        $recordings = DB::table('meeting_recordings')->where('office_id', $request->attributes->get('office_id'))->where('appointment_id', $id)->orderByDesc('id')->get();
+
+        return response()->json(['count' => $recordings->count(), 'revision' => hash('sha256', $recordings->toJson()), 'html' => view('partials.meeting-recordings', ['recordings' => $recordings, 'meeting' => $meeting, 'access' => app(WorkspacePermissions::class)])->render()])->header('Cache-Control', 'private, no-store');
+    }
+
     public function finish(Request $request, int $id): JsonResponse
     {
         $row = $this->recording($request, $id);
         $this->recorder($request, $row);
         $data = $request->validate(['duration_seconds' => 'required|integer|min:0|max:604800', 'chunks' => 'required|integer|min:0|max:100001']);
-        DB::transaction(function () use ($id, $data): void {
+        DB::transaction(function () use ($request, $id, $data): void {
             $row = DB::table('meeting_recordings')->where('id', $id)->lockForUpdate()->first();
             abort_unless(DB::table('meeting_audio_chunks')->where('recording_id', $id)->count() === (int) $data['chunks'], 409, 'Ainda há trechos de áudio que precisam ser salvos.');
+            if (in_array($row->status, ['ready', 'empty'], true)) {
+                return;
+            }
             DB::table('meeting_recordings')->where('id', $id)->update(['status' => $row->size ? 'ready' : 'empty', 'duration_seconds' => $data['duration_seconds'], 'finished_at' => now(), 'updated_at' => now()]);
+            DB::table('activities')->insert(['office_id' => $request->attributes->get('office_id'), 'description' => $row->size ? 'Gravação salva na reunião' : 'Gravação encerrada sem áudio', 'actor' => $request->attributes->get('actor'), 'kind' => 'meeting', 'created_at' => now()]);
         });
+        $saved = $this->recording($request, $id);
 
-        return response()->json(['message' => 'Gravação salva.']);
+        return response()->json(['message' => $saved->size ? 'Gravação salva.' : 'Nenhum áudio foi capturado.', 'id' => $id, 'status' => $saved->status, 'size' => (int) $saved->size, 'audio_url' => $saved->size ? route('meetings.audio', ['id' => $id]) : null]);
     }
 
     public function notes(Request $request, int $id): JsonResponse

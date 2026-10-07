@@ -36,13 +36,50 @@ export function setupMeetingModule({ api, toast }) {
         if (!popup) { toast('Permita pop-ups para abrir a janela de gravação.', true); return; }
         popup.opener = null; popup.focus();
     }));
-    document.querySelectorAll('.meeting-notes-form').forEach(form => form.addEventListener('submit', async event => {
-        event.preventDefault(); const button = form.querySelector('button'); const error = form.querySelector('.form-error'); button.disabled = true; error.hidden = true;
-        try { await api(`/api/v1/meeting-recordings/${form.dataset.recordingId}/notes`, { method: 'PATCH', data: { notes: form.elements.notes.value, minutes: form.elements.minutes.value } }); toast('Anotações e ata salvas.'); }
-        catch (exception) { error.textContent = exception.message; error.hidden = false; }
-        finally { button.disabled = false; }
-    }));
-    document.querySelectorAll('[data-meeting-ai]').forEach(button => button.addEventListener('click', () => { const feedback = button.parentElement.querySelector('.meeting-ai-feedback'); feedback.hidden = false; feedback.textContent = 'Integração com IA em desenvolvimento. Nenhum áudio foi enviado. Você pode registrar anotações e ata manualmente.'; }));
+    const bindForms = root => {
+        root.querySelectorAll('.meeting-notes-form').forEach(form => {
+            if (form.dataset.bound) return; form.dataset.bound = '1';
+            form.addEventListener('input', () => { form.dataset.dirty = '1'; });
+            form.addEventListener('submit', async event => {
+                event.preventDefault(); const button = form.querySelector('button'); const error = form.querySelector('.form-error'); button.disabled = true; error.hidden = true;
+                try { await api(`/api/v1/meeting-recordings/${form.dataset.recordingId}/notes`, { method: 'PATCH', data: { notes: form.elements.notes.value, minutes: form.elements.minutes.value } }); delete form.dataset.dirty; toast('Anotações e ata salvas.'); }
+                catch (exception) { error.textContent = exception.message; error.hidden = false; }
+                finally { button.disabled = false; }
+            });
+        });
+        setupMeetingDevelopmentActions(root);
+    };
+    bindForms(module);
+    const refresh = async (item, reveal = false) => {
+        if (!item || item.dataset.refreshing) return;
+        const container = item.querySelector('[data-meeting-recordings]');
+        item.dataset.refreshing = '1';
+        try {
+            const result = await api(`/api/v1/meetings/${item.dataset.meetingId}/recordings`);
+            item.querySelector('[data-recording-count]').textContent = `${result.count} ${result.count === 1 ? 'gravação' : 'gravações'}`;
+            if (result.revision !== container.dataset.revision) {
+                if (container.querySelector('[data-dirty="1"]') || [...container.querySelectorAll('audio')].some(audio => !audio.paused)) {
+                    if (reveal) toast('Nova gravação registrada. Salve suas anotações e pause o áudio para atualizar a lista.');
+                    return;
+                }
+                container.innerHTML = result.html; container.dataset.revision = result.revision; bindForms(container);
+            }
+            if (reveal) { item.open = true; toast('Gravação registrada nesta reunião.'); }
+        } catch (exception) { if (reveal) toast('Não foi possível atualizar a lista. Reabra Reuniões para consultar o áudio.', true); }
+        finally { delete item.dataset.refreshing; }
+    };
+    module.querySelectorAll('[data-meeting-id]').forEach(item => item.addEventListener('toggle', () => { if (item.open) refresh(item); }));
+    const refreshVisible = () => { if (document.visibilityState !== 'hidden') module.querySelectorAll('[data-meeting-id][open]').forEach(item => refresh(item)); };
+    window.addEventListener('focus', refreshVisible); document.addEventListener('visibilitychange', refreshVisible);
+    if (window.BroadcastChannel) {
+        const channel = new window.BroadcastChannel(module.dataset.syncChannel);
+        channel.addEventListener('message', event => {
+            if (event.data?.type !== 'recording-saved' || !/^\d+$/.test(String(event.data.meetingId))) return;
+            refresh(module.querySelector(`[data-meeting-id="${event.data.meetingId}"]`), true);
+        });
+        window.addEventListener('pagehide', () => channel.close());
+    }
+
 }
 
 export function setupMeetingRecorder({ api, toast }) {
@@ -59,6 +96,7 @@ export function setupMeetingRecorder({ api, toast }) {
     const appointmentId = windowPanel.dataset.meetingId;
     const appointmentTitle = windowPanel.dataset.meetingTitle;
     let recorder, stream, queue, recordingId, startedAt, elapsed = 0, interval, unsettled = false, finalizing = false;
+    setupMeetingDevelopmentActions(windowPanel);
     document.querySelector('#meeting-close-window').addEventListener('click', () => window.close());
     const releaseMicrophone = () => { stream?.getTracks().forEach(track => track.stop()); clearInterval(interval); };
     const showFailure = exception => {
@@ -72,9 +110,12 @@ export function setupMeetingRecorder({ api, toast }) {
         try {
             state.textContent = 'Salvando gravação…';
             await queue.flush();
-            await api(`/api/v1/meeting-recordings/${recordingId}/finish`, { method: 'POST', data: { duration_seconds: elapsed, chunks: queue.sentCount } });
-            unsettled = false; error.hidden = true; retry.hidden = true; state.textContent = 'Gravação salva'; notice.textContent = 'O microfone está desligado. O áudio já pode ser consultado nesta reunião.';
-            const player = document.querySelector('#meeting-saved-audio'); player.src = `/reunioes/audio/${recordingId}`; player.hidden = queue.savedBytes === 0;
+            const saved = await api(`/api/v1/meeting-recordings/${recordingId}/finish`, { method: 'POST', data: { duration_seconds: elapsed, chunks: queue.sentCount } });
+            if (!['ready', 'empty'].includes(saved.status)) throw new Error('Não foi possível confirmar o registro da gravação.');
+            unsettled = false; error.hidden = true; retry.hidden = true; state.textContent = saved.status === 'ready' ? 'Gravação salva' : 'Nenhum áudio capturado'; notice.textContent = saved.status === 'ready' ? 'O microfone está desligado. O áudio foi registrado nesta reunião.' : 'O microfone está desligado. Não recebemos áudio; reabra a gravação para tentar novamente.';
+            const player = document.querySelector('#meeting-saved-audio'); if (saved.audio_url) player.src = saved.audio_url; player.hidden = saved.status !== 'ready';
+            document.querySelector('#meeting-saved-actions').hidden = saved.status !== 'ready';
+            if (window.BroadcastChannel) { const channel = new window.BroadcastChannel(windowPanel.dataset.syncChannel); channel.postMessage({ type: 'recording-saved', meetingId: appointmentId }); channel.close(); }
             document.querySelector('#meeting-close-window').hidden = false;
         } catch (exception) { showFailure(exception); }
         finally { finalizing = false; retry.disabled = false; }
@@ -115,4 +156,11 @@ export function setupMeetingRecorder({ api, toast }) {
     retry.addEventListener('click', finish);
     window.addEventListener('beforeunload', event => { if (unsettled) { event.preventDefault(); event.returnValue = ''; } });
     window.addEventListener('pagehide', releaseMicrophone);
+}
+
+export function setupMeetingDevelopmentActions(root) {
+    root.querySelectorAll('[data-meeting-ai]').forEach(button => {
+        if (button.dataset.bound) return; button.dataset.bound = '1';
+        button.addEventListener('click', () => { const feedback = button.parentElement.querySelector('.meeting-ai-feedback'); feedback.hidden = false; feedback.textContent = 'Resumo e ata por IA em desenvolvimento. Nenhum áudio foi enviado. Você pode registrar as anotações manualmente.'; });
+    });
 }

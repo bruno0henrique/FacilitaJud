@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.10** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.11** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -125,3 +125,9 @@ As regras estão em [NEO.md](NEO.md). Para cumprir o bloqueio de dados sensívei
 A gravação abre em uma janela independente; manter essa janela aberta permite navegar no sistema sem parar a captura. Fechar ou recarregar a janela de gravação encerra o microfone: o navegador mostra um aviso enquanto houver áudio pendente. Participantes e ciência são registrados por gravação; aceite dos termos fica vinculado ao membro e à versão e pode ser consultado em Configurações. Nenhum áudio é enviado ao Neo. Transcrição/ata automática permanece em desenvolvimento.
 
 Verificação adicional: `node --test tests/neo-chat.test.mjs tests/meeting-recorder.test.mjs tests/neon-auth.test.mjs`. Os testes PHP incluem uploads multipart com sequência textual, reprodução real de Opus, isolamento de áudio e inspeção do payload enviado à IA com dados pessoais de teste e instrução maliciosa.
+
+### Registro de gravação — 0.3.11
+
+Após salvar no pop-up, o servidor confirma o estado do áudio e registra a atividade. A lista da reunião é sincronizada por um canal limitado ao escritório e usuário; voltar à janela ou abrir uma reunião também consulta o registro no servidor. Anotações ainda não salvas e áudio em reprodução são preservados. O link Ver gravação na reunião mantém a reunião selecionada e a página de origem. Capturas vazias não são anunciadas como áudio salvo.
+
+Resumo e ata por IA aparecem após o salvamento, marcados Em desenvolvimento. O botão informa o estado localmente e não envia áudio nem transcrições ao Neo ou à OpenAI. Testes de segurança cobrem permissões, sessão expirada, CSRF, XSS, validação de upload, isolamento de áudio e finalização idempotente; não representam uma auditoria externa de segurança.

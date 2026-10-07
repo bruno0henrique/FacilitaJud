@@ -138,4 +138,72 @@ class MeetingRecordingTest extends TestCase
         $this->assertSame($audio, $response->streamedContent());
         $this->get('/reunioes')->assertOk()->assertSee('audio controls', false)->assertSee('Baixar áudio');
     }
+
+    public function test_saved_recordings_are_discoverable_and_finalization_is_idempotent(): void
+    {
+        $id = $this->start();
+        $this->chunk($id, 0, 'synthetic-audio');
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 8, 'chunks' => 1])->assertOk()->assertJson(['id' => $id, 'status' => 'ready', 'size' => 15])->assertJsonPath('audio_url', route('meetings.audio', ['id' => $id]));
+        $activityCount = DB::table('activities')->count();
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 99, 'chunks' => 1])->assertOk();
+        $this->assertSame($activityCount, DB::table('activities')->count());
+        $this->assertDatabaseHas('meeting_recordings', ['id' => $id, 'duration_seconds' => 8]);
+        $list = $this->getJson('/api/v1/meetings/'.$this->meeting.'/recordings')->assertOk()->assertJsonPath('count', 1);
+        $this->assertStringContainsString('audio controls', $list->json('html'));
+        $this->assertStringContainsString('Resumo e ata por IA', $list->json('html'));
+        $this->assertStringContainsString('Em desenvolvimento', $list->json('html'));
+        $this->assertStringNotContainsString(base64_encode('synthetic-audio'), $list->getContent());
+        $this->get('/reunioes?meeting='.$this->meeting)->assertOk()->assertSee('data-meeting-id="'.$this->meeting.'"  open', false);
+    }
+
+    public function test_empty_capture_is_reported_and_cannot_be_played(): void
+    {
+        $id = $this->start();
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 1, 'chunks' => 0])->assertOk()->assertJson(['status' => 'empty', 'size' => 0, 'audio_url' => null, 'message' => 'Nenhum áudio foi capturado.']);
+        $this->get('/reunioes/audio/'.$id)->assertNotFound();
+    }
+
+    public function test_recording_list_and_mutations_enforce_assignment_and_session(): void
+    {
+        $id = $this->start();
+        $member = DB::table('members')->where('office_id', $this->office)->where('account_type', 'associate')->first();
+        DB::table('members')->where('id', $member->id)->update(['provider_id' => 'secure-meeting-user', 'permissions' => json_encode(['reunioes.view', 'reunioes.record'])]);
+        $this->withSession(['identity' => ['id' => 'secure-meeting-user', 'expires_at' => time() + 900]]);
+        $this->getJson('/api/v1/meetings/'.$this->meeting.'/recordings')->assertNotFound();
+        DB::table('appointments')->where('id', $this->meeting)->update(['assigned_member_id' => $member->id]);
+        $this->getJson('/api/v1/meetings/'.$this->meeting.'/recordings')->assertOk();
+        $this->post('/api/v1/meeting-recordings/'.$id.'/chunks', ['sequence' => '0', 'file' => UploadedFile::fake()->createWithContent('audio.webm', 'injected')], ['Accept' => 'application/json'])->assertForbidden();
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 1, 'chunks' => 0])->assertForbidden();
+        config(['facilitajud.demo' => false]);
+        $this->withSession(['identity' => ['id' => 'secure-meeting-user', 'expires_at' => time() - 1]]);
+        $this->getJson('/api/v1/meetings/'.$this->meeting.'/recordings')->assertUnauthorized();
+        $this->get('/reunioes/audio/'.$id)->assertRedirect('/entrar');
+    }
+
+    public function test_untrusted_notes_are_escaped_and_invalid_uploads_are_rejected(): void
+    {
+        $id = $this->start();
+        $this->post('/api/v1/meeting-recordings/'.$id.'/chunks', ['sequence' => '-1', 'file' => UploadedFile::fake()->createWithContent('audio.webm', 'invalid')], ['Accept' => 'application/json'])->assertUnprocessable();
+        $this->post('/api/v1/meeting-recordings/'.$id.'/chunks', ['sequence' => '0', 'file' => UploadedFile::fake()->create('large.webm', 513)], ['Accept' => 'application/json'])->assertUnprocessable();
+        $this->assertDatabaseCount('meeting_audio_chunks', 0);
+        $this->patchJson('/api/v1/meeting-recordings/'.$id.'/notes', ['notes' => '</textarea><script>alert(1)</script>', 'minutes' => '<img src=x onerror=alert(1)>'])->assertOk();
+        $html = $this->getJson('/api/v1/meetings/'.$this->meeting.'/recordings')->assertOk()->json('html');
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringNotContainsString('<img src=x', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertStringContainsString('&lt;img', $html);
+    }
+
+    public function test_csrf_protection_blocks_writes_without_a_session_token(): void
+    {
+        $this->app->instance('env', 'production');
+        try {
+            $this->postJson('/api/v1/meeting-recordings/999999/finish', ['duration_seconds' => 1, 'chunks' => 0])->assertStatus(419);
+            $this->patchJson('/api/v1/meeting-recordings/999999/notes', ['notes' => 'forged'])->assertStatus(419);
+            $this->postJson('/api/v1/team/invite', [])->assertStatus(419);
+            $this->postJson('/api/v1/neo/chat', ['message' => 'Explique custas'])->assertStatus(419);
+        } finally {
+            $this->app->instance('env', 'testing');
+        }
+    }
 }

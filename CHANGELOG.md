@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.11 — 2026-10-07
+
+- Sincronização da lista de gravações após salvar no pop-up, ao retornar à tela ou abrir uma reunião, sem descartar anotações pendentes ou interromper reprodução.
+- Confirmação de registro pelo servidor, estado explícito para captura sem áudio, link para consultar a gravação e finalização idempotente com histórico de atividade.
+- Opção Gerar resumo e ata após salvar, marcada Em desenvolvimento e sem envio de áudio para IA.
+- Testes de uso e segurança para atualização da lista, último trecho, repetição de salvamento, sessão expirada, atribuições, uploads inválidos, conteúdo malicioso e proteção CSRF.
+
 ## 0.3.10 — 2026-10-07
 
 - Correção do salvamento de áudio: sequência enviada como texto pelo navegador agora é validada como número, preservando ordem e idempotência.
