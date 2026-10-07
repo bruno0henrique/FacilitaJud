@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\NeoController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WorkQueueController;
 use App\Http\Controllers\WorkspaceController;
@@ -15,6 +16,8 @@ Route::post('/auth/neon/{action}', [AuthController::class, 'action'])->whereIn('
 Route::post('/sair', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(WorkspaceAccess::class)->group(function (): void {
+    Route::post('/api/v1/neo/chat', [NeoController::class, 'chat'])->middleware('throttle:20,1');
+    Route::get('/reunioes/gravar/{id}', [MeetingController::class, 'window'])->name('meetings.record');
     Route::post('/api/v1/meetings/consent', [MeetingController::class, 'consent']);
     Route::post('/api/v1/meetings/{id}/recordings', [MeetingController::class, 'start']);
     Route::post('/api/v1/meeting-recordings/{id}/chunks', [MeetingController::class, 'chunk']);

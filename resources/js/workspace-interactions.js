@@ -113,14 +113,5 @@ export function setupWorkspaceInteractions({ api, toast, openEditor, dateTime })
         while (neoHistory.children.length > 30) neoHistory.firstElementChild.remove();
         return paragraph;
     };
-    document.querySelector('#neo-form')?.addEventListener('submit', event => {
-        event.preventDefault(); const text = neoInput.value.trim(); if (!text) return;
-        reply(text, true); neoInput.value = '';
-        const response = reply('A integração com IA está em desenvolvimento. Por enquanto, use os módulos do escritório para consultar e atualizar seus registros.');
-        if (/prazo|tarefa|agenda/i.test(text)) {
-            const link = document.createElement('a'); link.className = 'text-link'; link.href = /prazo/i.test(text) ? '/prazos' : /tarefa/i.test(text) ? '/tarefas' : '/agenda'; link.textContent = 'Abrir módulo →'; response.append(document.createElement('br'), link);
-        }
-    });
-    document.querySelectorAll('[data-neo-suggestion]').forEach(button => button.addEventListener('click', () => { neoInput.value = button.dataset.neoSuggestion; neoInput.focus(); }));
     document.querySelector('#neo-voice')?.addEventListener('click', () => reply('Conversa por voz em desenvolvimento. O microfone ainda não está conectado.'));
 }

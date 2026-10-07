@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.9** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.10** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -115,3 +115,13 @@ Trechos são produzidos a cada 15 segundos, divididos em até 256 KB e enviados 
 Ao falhar o envio, a captura é encerrada; os trechos pendentes permanecem na memória desta página para tentar novamente, e os já enviados permanecem no banco. Não feche a aba enquanto o salvamento estiver pendente: o navegador exibirá um aviso, mas não pode garantir a recuperação de trechos ainda não enviados após fechar ou perder energia. Gravações abandonadas preservam áudio parcial; após 10 minutos sem envio, um novo início encerra o registro anterior como interrompido. A reprodução usa streaming com HTTP Range, autenticado e sem cache público.
 
 Transcrição automática, resumo, ata e sugestões de tarefas/prazos aguardam a conexão com IA. A interface identifica essa condição, permite anotações/ata manuais e não envia áudio a provedores externos nem modifica prazos. A futura integração deverá conservar a separação de escritórios e exigir revisão humana antes de aplicar sugestões. O tom Opus em `tests/Fixtures/meeting-tone.webm` é gerado sinteticamente e usado apenas nos testes de integridade/reprodução, sem gravações de pessoas.
+
+## Neo e janela de gravação — 0.3.10
+
+Configure `OPENAI_API_KEY` no servidor (Vercel → Settings → Environment Variables) e faça redeploy; localmente use `.env`. `OPENAI_MODEL` é opcional, padrão `gpt-4.1-mini`. A chave nunca é enviada ao navegador. O Compose carrega as variáveis pelo `.env`.
+
+As regras estão em [NEO.md](NEO.md). Para cumprir o bloqueio de dados sensíveis, somente temas fixos reconhecidos são enviados à OpenAI: o texto original, o histórico e os registros do escritório nunca são transmitidos. Navegação é resolvida localmente e respeita o perfil. Não há ferramentas, leitura de documentos/áudios ou alteração automática de registros. Perguntas fora da lista recebem orientação local. A integração usa `store: false`; isso não representa garantia de ausência de retenção operacional pelo provedor. Referências: [streaming Responses](https://developers.openai.com/api/docs/guides/streaming-responses) e [modelo GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini).
+
+A gravação abre em uma janela independente; manter essa janela aberta permite navegar no sistema sem parar a captura. Fechar ou recarregar a janela de gravação encerra o microfone: o navegador mostra um aviso enquanto houver áudio pendente. Participantes e ciência são registrados por gravação; aceite dos termos fica vinculado ao membro e à versão e pode ser consultado em Configurações. Nenhum áudio é enviado ao Neo. Transcrição/ata automática permanece em desenvolvimento.
+
+Verificação adicional: `node --test tests/neo-chat.test.mjs tests/meeting-recorder.test.mjs tests/neon-auth.test.mjs`. Os testes PHP incluem uploads multipart com sequência textual, reprodução real de Opus, isolamento de áudio e inspeção do payload enviado à IA com dados pessoais de teste e instrução maliciosa.

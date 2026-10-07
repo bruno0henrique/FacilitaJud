@@ -34,7 +34,7 @@ class MeetingRecordingTest extends TestCase
 
     private function chunk(int $recording, int $sequence, string $contents): void
     {
-        $this->post('/api/v1/meeting-recordings/'.$recording.'/chunks', ['sequence' => $sequence, 'file' => UploadedFile::fake()->createWithContent('audio.webm', $contents)], ['Accept' => 'application/json'])->assertOk();
+        $this->post('/api/v1/meeting-recordings/'.$recording.'/chunks', ['sequence' => (string) $sequence, 'file' => UploadedFile::fake()->createWithContent('audio.webm', $contents)], ['Accept' => 'application/json'])->assertOk();
     }
 
     public function test_meetings_follow_agenda_events_and_only_include_meeting_type(): void
@@ -48,17 +48,20 @@ class MeetingRecordingTest extends TestCase
 
     public function test_consent_is_required_once_and_participants_must_be_confirmed_each_time(): void
     {
-        $payload = ['participants_confirmed' => true, 'mime' => 'audio/webm'];
+        $payload = ['participants_confirmed' => true, 'participants' => ['Participante de teste'], 'mime' => 'audio/webm'];
+        $this->get('/reunioes/gravar/'.$this->meeting)->assertForbidden();
         $this->postJson('/api/v1/meetings/'.$this->meeting.'/recordings', $payload)->assertForbidden();
         $this->postJson('/api/v1/meetings/consent', ['accepted' => false])->assertUnprocessable();
         $this->postJson('/api/v1/meetings/consent', ['accepted' => true])->assertOk();
         $this->postJson('/api/v1/meetings/consent', ['accepted' => true])->assertOk();
         $this->assertDatabaseCount('meeting_consents', 1);
         $this->get('/reunioes')->assertViewHas('meetingConsented', true);
+        $this->get('/configuracoes')->assertOk()->assertSee('Ciência registrada no seu perfil');
+        $this->get('/reunioes/gravar/'.$this->meeting)->assertOk()->assertSee('meeting-recording-window', false)->assertDontSee('id="sidebar"', false)->assertSee('Todos os envolvidos');
         $this->postJson('/api/v1/meetings/'.$this->meeting.'/recordings', ['mime' => 'audio/webm'])->assertUnprocessable();
         $this->postJson('/api/v1/meetings/'.$this->meeting.'/recordings', $payload)->assertCreated()->assertJsonStructure(['id']);
         $this->postJson('/api/v1/meetings/'.$this->meeting.'/recordings', $payload)->assertConflict();
-        $this->assertDatabaseHas('meeting_recordings', ['consent_version' => MeetingController::CONSENT_VERSION]);
+        $this->assertDatabaseHas('meeting_recordings', ['consent_version' => MeetingController::CONSENT_VERSION, 'participants' => json_encode(['Participante de teste'])]);
     }
 
     public function test_audio_chunks_are_idempotent_ordered_and_stream_with_byte_ranges(): void
@@ -71,7 +74,7 @@ class MeetingRecordingTest extends TestCase
         $this->post('/api/v1/meeting-recordings/'.$id.'/chunks', ['sequence' => 2, 'file' => UploadedFile::fake()->createWithContent('audio.webm', 'out of order')], ['Accept' => 'application/json'])->assertConflict();
         $this->chunk($id, 1, 'body456');
         $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 14400, 'chunks' => 3])->assertConflict();
-        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 14400, 'chunks' => 2])->assertOk();
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 14400, 'chunks' => '2'])->assertOk();
         $this->assertDatabaseHas('meeting_recordings', ['id' => $id, 'size' => 16, 'duration_seconds' => 14400, 'status' => 'ready']);
         $audio = $this->get('/reunioes/audio/'.$id)->assertOk()->assertHeader('Accept-Ranges', 'bytes')->assertHeader('Content-Length', '16');
         $this->assertSame('header123body456', $audio->streamedContent());
@@ -130,7 +133,7 @@ class MeetingRecordingTest extends TestCase
         $this->assertStringStartsWith(hex2bin('1a45dfa3'), $audio);
         $this->chunk($id, 0, substr($audio, 0, 1000));
         $this->chunk($id, 1, substr($audio, 1000));
-        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 1, 'chunks' => 2])->assertOk();
+        $this->postJson('/api/v1/meeting-recordings/'.$id.'/finish', ['duration_seconds' => 1, 'chunks' => '2'])->assertOk();
         $response = $this->get('/reunioes/audio/'.$id)->assertOk()->assertHeader('Content-Type', 'audio/webm;codecs=opus');
         $this->assertSame($audio, $response->streamedContent());
         $this->get('/reunioes')->assertOk()->assertSee('audio controls', false)->assertSee('Baixar áudio');

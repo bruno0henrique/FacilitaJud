@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.10 — 2026-10-07
+
+- Correção do salvamento de áudio: sequência enviada como texto pelo navegador agora é validada como número, preservando ordem e idempotência.
+- Janela independente de gravação com cronômetro, participantes, aviso visível e reprodução após salvar; navegar na janela principal não interrompe a captura.
+- Data das reuniões padronizada, retirada da legenda Área de trabalho do bloco do escritório e ciência dos termos visível no perfil.
+- Confirmação explícita de ciência dos envolvidos em cada gravação, com participantes registrados no banco.
+- Neo conectado à Responses API da OpenAI, com progresso, texto progressivo, tratamento de indisponibilidade e regras em NEO.md.
+- Perguntas livres, histórico, documentos, áudios e dados do escritório nunca são enviados à IA: somente temas jurídicos de lista fixa. Navegação é local e respeita permissões.
+
 ## 0.3.9 — 2026-10-07
 
 - Módulo Reuniões conectado aos eventos do tipo Reunião da agenda, com permissões de consulta e gravação definidas pelo ADM.

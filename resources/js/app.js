@@ -413,4 +413,8 @@ trialForm?.addEventListener('submit', async event => {
 
 if (currentModule) import('./workspace-interactions.js').then(({ setupWorkspaceInteractions }) => setupWorkspaceInteractions({ api, toast, openEditor, dateTime })).catch(() => toast('Recarregue para carregar as interações.', true));
 
-if (currentModule === 'reunioes') import('./meeting-recorder.js').then(({ setupMeetingRecorder }) => setupMeetingRecorder({ api, toast })).catch(() => toast('Recarregue para carregar as reuniões.', true));
+if (currentModule === 'reunioes') import('./meeting-recorder.js').then(({ setupMeetingModule }) => setupMeetingModule({ api, toast })).catch(() => toast('Recarregue para carregar as reuniões.', true));
+
+if (document.querySelector('#meeting-recording-window')) import('./meeting-recorder.js').then(({ setupMeetingRecorder }) => setupMeetingRecorder({ api, toast })).catch(() => toast('Recarregue para carregar a gravação.', true));
+
+if (document.querySelector('#neo-chat')) import('./neo-chat.js').then(({ setupNeoChat }) => setupNeoChat()).catch(() => toast('Recarregue para carregar o Neo.', true));

@@ -99,6 +99,7 @@ class WorkspaceController extends Controller
             'access' => $access, 'actor' => $request->attributes->get('actor'), 'permissionOptions' => WorkspacePermissions::OPTIONS,
             'categories' => in_array($module, ['equipe', 'configuracoes'], true) ? DB::table('team_categories')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->whereIn('id', DB::table('members')->where('id', $request->attributes->get('member_id'))->select('category_id')))->orderBy('name')->get() : collect(),
             'calendarMonth' => $calendarMonth,
+            'meetingProfileConsent' => $module === 'configuracoes' ? DB::table('meeting_consents')->where('office_id', $officeId)->where('member_id', $request->attributes->get('member_id'))->where('version', MeetingController::CONSENT_VERSION)->first() : null,
             'isAdmin' => $request->attributes->get('is_admin'), 'workItems' => $workItems, 'workTotal' => $workTotal,
             'primaryWork' => $primaryWork,
             'workCompleted' => $workCompleted, 'workDay' => $day,

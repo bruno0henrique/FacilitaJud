@@ -11,7 +11,7 @@
                 <a href="{{ route('workspace', ['module' => $key]) }}" class="nav-link {{ $module === $key ? 'active' : '' }}" @if($module === $key) aria-current="page" @endif><span class="nav-icon"><x-icon :name="$icon"/></span><span>{{ $label }}</span>@if($key === 'tarefas')<span class="nav-count" data-pending-count>{{ $pendingCount }}</span>@endif</a>
             @endforeach
         </nav>
-        <div class="office-card"><x-icon name="building-2"/><strong>{{ $office->name }}</strong><p>Área de trabalho</p><a href="{{ route('workspace', ['module' => 'configuracoes']) }}">Meu escritório <x-icon name="arrow-up-right"/></a></div>
+        <div class="office-card"><x-icon name="building-2"/><strong>{{ $office->name }}</strong><a href="{{ route('workspace', ['module' => 'configuracoes']) }}">Meu escritório <x-icon name="arrow-up-right"/></a></div>
 
     </aside>
     <div class="sidebar-backdrop" hidden></div>
@@ -84,6 +84,7 @@
         @elseif($module === 'configuracoes')
             @if($isAdmin)<section class="surface settings-surface"><h2>Meu escritório</h2><form id="settings-form"><label>Nome de exibição<input name="display_name" value="{{ $office->display_name }}" required maxlength="120"></label><label>Escritório<input name="name" value="{{ $office->name }}" required maxlength="160"></label><label class="switch-label">Destacar prazos próximos<input name="reminders" type="checkbox" role="switch" @checked($office->reminders)></label><p class="metadata">Preferência visual. Notificações por e-mail ainda não estão conectadas.</p><p class="form-error" role="alert" hidden></p><button class="button primary" type="submit"><x-icon name="save"/> Salvar alterações</button></form></section>
             @else<section class="surface settings-surface"><h2>Meu perfil</h2><p>{{ $actor }}</p>@foreach($members as $profile)<p class="metadata">{{ $categories->firstWhere('id', $profile->category_id)?->name ?? 'Associado' }}</p><p>{{ $profile->responsibilities ?: ($categories->firstWhere('id', $profile->category_id)?->responsibilities ?: 'Responsabilidades definidas pelo administrador.') }}</p>@endforeach</section>@endif
+            <section class="surface settings-surface"><h2>Gravação de reuniões</h2><p>{{ $meetingProfileConsent ? "Ciência registrada no seu perfil" : "Ciência dos termos ainda não registrada" }}</p>@if($meetingProfileConsent)<p class="metadata">{{ \Carbon\Carbon::parse($meetingProfileConsent->accepted_at)->format("d/m/Y · H:i") }} · Versão {{ $meetingProfileConsent->version }}</p>@endif</section>
             <section class="integration-settings"><h2>Conexões</h2><div><span><strong>Neon Auth</strong><small>Autenticação do escritório</small></span><span class="badge {{ config('facilitajud.neon_url') ? 'green' : 'lavender' }}">{{ config('facilitajud.neon_url') ? 'Configurado' : 'Aguardando configuração' }}</span></div><div><span><strong>Judit</strong><small>Consulta e acompanhamento processual</small></span><span class="badge lavender">Integração planejada</span></div>@if(!$demo || session()->has('trial_workspace'))<form action="{{ route('logout') }}" method="POST" id="logout-form">@csrf<button class="button subtle" type="submit">Sair da conta <x-icon name="log-out"/></button></form>@endif</section>
         @endif
         <p class="empty-state search-empty" hidden>Nenhum resultado para esta busca.</p>

@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MeetingController extends Controller
@@ -59,17 +60,27 @@ class MeetingController extends Controller
         abort_unless($row->member_id === $request->attributes->get('member_id'), 403, 'Somente quem iniciou pode finalizar esta gravação.');
     }
 
+    public function window(Request $request, int $id): View
+    {
+        $this->access($request, true);
+        abort_unless($this->consented($request), 403, 'Leia e aceite os termos de gravação primeiro.');
+        $meeting = $this->appointments($request)->where('id', $id)->first();
+        abort_unless($meeting, 404);
+
+        return view('meeting-window', ['meeting' => $meeting, 'actor' => $request->attributes->get('actor')]);
+    }
+
     public function start(Request $request, int $id): JsonResponse
     {
         $this->access($request, true);
         abort_unless($this->consented($request), 403, 'Leia e aceite os termos de gravação primeiro.');
-        $request->validate(['participants_confirmed' => 'required|accepted', 'mime' => ['required', Rule::in(['audio/webm', 'audio/webm;codecs=opus', 'audio/ogg', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2'])]]);
+        $request->validate(['participants_confirmed' => 'required|accepted', 'participants' => 'nullable|array|max:20', 'participants.*' => 'required|string|max:120', 'mime' => ['required', Rule::in(['audio/webm', 'audio/webm;codecs=opus', 'audio/ogg', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2'])]]);
         $recording = DB::transaction(function () use ($request, $id): int {
             $appointment = $this->appointments($request)->where('id', $id)->lockForUpdate()->first();
             abort_unless($appointment, 404);
             abort_if(DB::table('meeting_recordings')->where('appointment_id', $id)->where('status', 'recording')->where('updated_at', '>', now()->subMinutes(10))->exists(), 409, 'Esta reunião já está sendo gravada.');
             DB::table('meeting_recordings')->where('appointment_id', $id)->where('status', 'recording')->update(['status' => 'interrupted', 'updated_at' => now()]);
-            $recording = DB::table('meeting_recordings')->insertGetId(['office_id' => $request->attributes->get('office_id'), 'appointment_id' => $id, 'member_id' => $request->attributes->get('member_id'), 'mime' => $request->input('mime'), 'status' => 'recording', 'consent_version' => self::CONSENT_VERSION, 'participants_confirmed_at' => now(), 'started_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            $recording = DB::table('meeting_recordings')->insertGetId(['office_id' => $request->attributes->get('office_id'), 'appointment_id' => $id, 'member_id' => $request->attributes->get('member_id'), 'mime' => $request->input('mime'), 'status' => 'recording', 'consent_version' => self::CONSENT_VERSION, 'participants_confirmed_at' => now(), 'participants' => json_encode($request->input('participants', []), JSON_UNESCAPED_UNICODE), 'started_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
             DB::table('activities')->insert(['office_id' => $request->attributes->get('office_id'), 'description' => 'Gravação iniciada: '.$appointment->title, 'actor' => $request->attributes->get('actor'), 'kind' => 'meeting', 'created_at' => now()]);
 
             return $recording;
@@ -96,7 +107,7 @@ class MeetingController extends Controller
             }
             abort_unless($row->status === 'recording', 409, 'Esta gravação já foi encerrada.');
             $count = DB::table('meeting_audio_chunks')->where('recording_id', $id)->count();
-            abort_unless($data['sequence'] === $count, 409, 'Envie os trechos na ordem da gravação.');
+            abort_unless((int) $data['sequence'] === $count, 409, 'Envie os trechos na ordem da gravação.');
             abort_if($row->size + strlen($contents) > 268435456, 422, 'O áudio atingiu o limite de armazenamento de 256 MB por gravação. Encerre e inicie outra gravação.');
             DB::table('meeting_audio_chunks')->insert(['recording_id' => $id, 'sequence' => $data['sequence'], 'size' => strlen($contents), 'checksum' => $checksum, 'contents' => base64_encode($contents)]);
             DB::table('meeting_recordings')->where('id', $id)->update(['size' => $row->size + strlen($contents), 'updated_at' => now()]);
@@ -112,7 +123,7 @@ class MeetingController extends Controller
         $data = $request->validate(['duration_seconds' => 'required|integer|min:0|max:604800', 'chunks' => 'required|integer|min:0|max:100001']);
         DB::transaction(function () use ($id, $data): void {
             $row = DB::table('meeting_recordings')->where('id', $id)->lockForUpdate()->first();
-            abort_unless(DB::table('meeting_audio_chunks')->where('recording_id', $id)->count() === $data['chunks'], 409, 'Ainda há trechos de áudio que precisam ser salvos.');
+            abort_unless(DB::table('meeting_audio_chunks')->where('recording_id', $id)->count() === (int) $data['chunks'], 409, 'Ainda há trechos de áudio que precisam ser salvos.');
             DB::table('meeting_recordings')->where('id', $id)->update(['status' => $row->size ? 'ready' : 'empty', 'duration_seconds' => $data['duration_seconds'], 'finished_at' => now(), 'updated_at' => now()]);
         });
 
