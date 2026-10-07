@@ -26,7 +26,7 @@ class NeonSessionTest extends TestCase
         ]);
         $this->postJson('/auth/neon/register', ['name' => 'Ana', 'email' => 'ana@example.test', 'password' => 'test-password'])->assertOk()->assertJsonPath('redirect', url('/painel'))->assertDontSee($jwt)->assertSessionHas('neon_cookies');
         $this->get('/painel')->assertOk();
-        Http::assertSent(fn ($request) => $request->url() === 'https://auth.example.test/auth/token' && str_contains($request->header('Cookie')[0] ?? '', 'test-session'));
+        Http::assertSent(fn ($request) => $request->url() === 'https://auth.example.test/auth/token' && str_contains($request->header('Cookie')[0] ?? '', 'test-session') && $request->header('x-neon-auth-middleware') === ['true']);
         $this->assertStringNotContainsString('test-session', session('neon_cookies'));
         $this->postJson('/auth/neon/login', ['email' => 'ana@example.test', 'password' => 'test-password'])->assertOk();
         $this->assertSame(1, DB::table('members')->count());

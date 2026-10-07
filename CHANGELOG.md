@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 — 2026-10-06
+
+- Alinha o cabeçalho do proxy Laravel ao contrato de sessão do SDK oficial Neon Auth.
+
 ## 0.2.0 — 2026-10-06
 
 - Autenticação Neon pelo Laravel, com cookies protegidos no servidor e tratamento de cadastro já existente.

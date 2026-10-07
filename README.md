@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.2.0** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.2.1** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 

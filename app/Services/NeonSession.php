@@ -18,7 +18,7 @@ class NeonSession
         $cookies = $stored ? json_decode(Crypt::decryptString($stored), true) : [];
         $jar = new CookieJar(false, $cookies);
         $client = Http::acceptJson()->timeout(20)
-            ->withHeaders(['Origin' => rtrim(config('app.url'), '/')])->withOptions(['cookies' => $jar]);
+            ->withHeaders(['Origin' => rtrim(config('app.url'), '/'), 'x-neon-auth-middleware' => 'true'])->withOptions(['cookies' => $jar]);
         $response = $get ? $client->get($base.'/'.$endpoint) : $client->post($base.'/'.$endpoint, $data);
         $jar->extractCookies(new \GuzzleHttp\Psr7\Request($get ? 'GET' : 'POST', $base.'/'.$endpoint), $response->toPsrResponse());
         $request->session()->put('neon_cookies', Crypt::encryptString(json_encode($jar->toArray(), JSON_THROW_ON_ERROR)));
