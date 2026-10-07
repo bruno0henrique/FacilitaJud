@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 — 2026-10-06
+
+- O próximo passo considera obrigações importadas e permite registrar o andamento diretamente pela home.
+
+
 ## 0.2.1 — 2026-10-06
 
 - Alinha o cabeçalho do proxy Laravel ao contrato de sessão do SDK oficial Neon Auth.

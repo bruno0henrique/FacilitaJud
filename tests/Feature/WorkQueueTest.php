@@ -97,6 +97,7 @@ class WorkQueueTest extends TestCase
         $this->post('/api/v1/work/preview', ['file' => $this->file()], ['Accept' => 'application/json'])->assertForbidden();
         DB::table('work_items')->where('id', $item->id)->update(['assigned_member_id' => $staff]);
         $this->getJson('/api/v1/work/'.$item->id)->assertOk();
+        $this->get('/painel')->assertOk()->assertSee('Abrir obrigação')->assertViewHas('primaryWork', fn ($work) => $work->id === $item->id);
         $this->patchJson('/api/v1/work/'.$item->id, ['version' => 1, 'status' => 'Em andamento', 'note' => 'Consultando o andamento.'])->assertOk();
     }
 

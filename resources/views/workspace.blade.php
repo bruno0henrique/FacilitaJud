@@ -27,12 +27,14 @@
         </header>
 
         @if($module === 'painel')
+            @php($heroDue = $primaryWork ? \Carbon\Carbon::parse($primaryWork->due_at) : $nextTask?->due_at)
+            @php($heroPriority = $primaryWork ? ($heroDue->isToday() || $heroDue->isPast() ? 'Alta' : 'Média') : $nextTask?->priority)
             <section class="summary-grid" aria-label="Prioridades da rotina">
-                <article class="surface next-action" id="next-action" data-next-id="{{ $nextTask?->id }}">
-                    <div class="card-label"><span><x-icon name="circle-arrow-right"/> Seu próximo passo</span><span id="next-priority" class="badge {{ $nextTask?->priority === 'Alta' ? 'pink' : 'lavender' }}">{{ $nextTask ? 'Prioridade '.$nextTask->priority : 'Tudo organizado' }}</span></div>
-                    <h2 id="next-title">{{ $nextTask?->title ?? 'Você está em dia com suas tarefas.' }}</h2>
-                    <p id="next-context">{{ $nextTask?->context ?? 'Adicione uma nova tarefa para planejar o próximo passo.' }}</p>
-                    <div class="hero-bottom"><span id="next-due" class="due-highlight"><x-icon name="clock-3"/><span><small id="next-due-label">{{ $nextTask ? ($nextTask->due_at->isToday() ? 'Vence hoje' : $nextTask->due_at->translatedFormat('d M')) : 'Tudo em dia' }}</small><strong id="next-due-time">{{ $nextTask?->due_at->format('H:i') ?? '✓' }}</strong></span></span><button class="button primary" id="open-next">{{ $nextTask ? 'Abrir tarefa' : 'Criar tarefa' }} <x-icon name="arrow-right"/></button></div>
+                <article class="surface next-action" id="next-action" data-next-kind="{{ $primaryWork ? 'work' : 'task' }}" data-next-id="{{ $primaryWork?->id ?? $nextTask?->id }}">
+                    <div class="card-label"><span><x-icon name="circle-arrow-right"/> Seu próximo passo</span><span id="next-priority" class="badge {{ $heroPriority === 'Alta' ? 'pink' : 'lavender' }}">{{ $primaryWork || $nextTask ? 'Prioridade '.$heroPriority : 'Tudo organizado' }}</span></div>
+                    <h2 id="next-title">{{ $primaryWork?->title ?? $nextTask?->title ?? 'Você está em dia com suas tarefas.' }}</h2>
+                    <p id="next-context">{{ $primaryWork ? trim(($primaryWork->process_number ?: 'Obrigação do escritório').' · '.($primaryWork->context ?: 'Registre a conferência e o andamento.')) : ($nextTask?->context ?? 'Adicione uma nova tarefa para planejar o próximo passo.') }}</p>
+                    <div class="hero-bottom"><span id="next-due" class="due-highlight"><x-icon name="clock-3"/><span><small id="next-due-label">{{ $heroDue ? ($heroDue->isToday() ? 'Vence hoje' : $heroDue->translatedFormat('d M')) : 'Tudo em dia' }}</small><strong id="next-due-time">{{ $heroDue?->format('H:i') ?? '✓' }}</strong></span></span><button class="button primary" id="open-next">{{ $primaryWork ? 'Abrir obrigação' : ($nextTask ? 'Abrir tarefa' : 'Criar tarefa') }} <x-icon name="arrow-right"/></button></div>
                 </article>
                 <a class="surface summary-card" href="{{ route('workspace', ['module' => 'prazos']) }}"><span class="icon-tile pink"><x-icon name="clock-3"/></span><div class="summary-body"><h2>Prazos hoje</h2><strong class="metric">{{ $dueTodayCount + $queueTodayCount }}</strong><p class="attention">{{ $dueTodayCount + $queueTodayCount ? 'Pendentes para hoje' : 'Tudo em dia para hoje' }} @if($overdueCount) · {{ $overdueCount }} prazos jurídicos em atraso @endif</p><span class="summary-link">Ver prazos <x-icon name="arrow-right"/></span></div></a>
                 <a class="surface summary-card" href="{{ route('workspace', ['module' => 'agenda']) }}"><span class="icon-tile lavender"><x-icon name="calendar-days"/></span><div class="summary-body"><h2>Compromissos hoje</h2><strong class="metric">{{ $todayAppointmentsCount }}</strong><p>{{ $todayAppointment ? \Carbon\Carbon::parse($todayAppointment->starts_at)->format('H:i').' · '.$todayAppointment->title : 'Nenhum compromisso para hoje.' }}</p><span class="summary-link">Abrir agenda <x-icon name="arrow-right"/></span></div></a>
@@ -84,5 +86,6 @@
         <footer class="page-footer"><span>FacilitaJud · Mais leveza na rotina jurídica</span><span>{{ $demo ? 'Ambiente demonstrativo · Dados fictícios' : 'Área de trabalho protegida' }} · v{{ config('facilitajud.version') }}</span></footer>
     </main>
 </div>
+@if($module === 'painel' && $primaryWork) @include('partials.work-queue', ['dialogsOnly'=>true]) @endif
 @include('partials.dialogs')
 @endsection

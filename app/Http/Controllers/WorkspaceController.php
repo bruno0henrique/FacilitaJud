@@ -44,6 +44,8 @@ class WorkspaceController extends Controller
             $data['overdueCount'] = 0;
         }
         $queue = app(WorkQueueController::class)->query($request);
+        $queueNext = (clone $queue)->where('status', '!=', 'Concluído')->orderBy('due_at')->orderBy('id')->first();
+        $primaryWork = $queueNext && (! $data['nextTask'] || ! $request->attributes->get('is_admin') || Carbon::parse($queueNext->due_at)->lte($data['nextTask']->due_at)) ? $queueNext : null;
         $day = $request->query('day', now()->toDateString());
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
             $day = now()->toDateString();
@@ -69,6 +71,7 @@ class WorkspaceController extends Controller
         return view('workspace', $data + [
             'module' => $module, 'modules' => self::MODULES,
             'isAdmin' => $request->attributes->get('is_admin'), 'workItems' => $workItems, 'workTotal' => $workTotal,
+            'primaryWork' => $primaryWork,
             'workCompleted' => $workCompleted, 'workDay' => $day,
             'imports' => $request->attributes->get('is_admin') ? DB::table('spreadsheet_imports')->where('office_id', $officeId)->whereNotNull('mapping')->select('id', 'filename', 'created_at')->orderByDesc('id')->get() : collect(),
             'office' => DB::table('offices')->find($officeId),

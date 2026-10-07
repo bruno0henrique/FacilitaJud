@@ -219,6 +219,7 @@ function updateSummary(data) {
     const progress = document.querySelector('#task-progress'); if (progress) progress.value = data.completedCount;
     const hero = document.querySelector('#next-action');
     if (!hero) return;
+    if (hero.dataset.nextKind === 'work') return;
     hero.dataset.nextId = data.next?.id || '';
     document.querySelector('#next-title').textContent = data.next?.title || 'Você está em dia com suas tarefas.';
     document.querySelector('#next-context').textContent = data.next?.context || 'Adicione uma nova tarefa para planejar o próximo passo.';
@@ -228,7 +229,7 @@ function updateSummary(data) {
     document.querySelector('#next-due-time').textContent = data.next ? parseDate(data.next.due_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '✓';
     document.querySelector('#open-next').textContent = data.next ? 'Abrir tarefa →' : 'Criar tarefa';
 }
-document.querySelector('#open-next')?.addEventListener('click', () => {
+document.querySelector('#next-action[data-next-kind=task] #open-next')?.addEventListener('click', () => {
     const id = document.querySelector('#next-action').dataset.nextId;
     if (id) openDetail('task', id); else openEditor('task');
 });
@@ -278,13 +279,13 @@ const notice = sessionStorage.getItem('facilitajud-notice'); if (notice) { sessi
 const neonUrl = document.querySelector('meta[name="neon-auth-url"]').content;
 if (neonUrl) import('./neon-auth.js').then(({ setupNeonAuth }) => setupNeonAuth({ neonUrl, api, toast, currentModule })).catch(() => toast('Não foi possível carregar a autenticação. Recarregue a página.', true));
 
-if (currentModule === 'prazos') {
+if (document.querySelector('#work-dialog')) {
     const dialog = document.querySelector('#work-dialog');
     const form = document.querySelector('#work-form');
     let active;
-    document.querySelectorAll('[data-work-open]').forEach(button => button.addEventListener('click', async () => {
+    document.querySelectorAll('[data-work-open], #next-action[data-next-kind=work] #open-next').forEach(button => button.addEventListener('click', async () => {
         try {
-            const data = await api(`/api/v1/work/${button.dataset.workOpen}`); active = data.item;
+            const data = await api(`/api/v1/work/${button.dataset.workOpen || document.querySelector('#next-action').dataset.nextId}`); active = data.item;
             document.querySelector('#work-title').textContent = active.title;
             document.querySelector('#work-context').textContent = `${active.process_number || 'Processo não informado'} · ${active.context || ''}`;
             form.elements.status.value = active.status; form.elements.note.value = active.note || '';
