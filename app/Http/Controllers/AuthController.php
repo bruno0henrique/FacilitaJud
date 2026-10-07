@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
@@ -19,6 +20,38 @@ class AuthController extends Controller
     public function login(): View
     {
         return view('login');
+    }
+
+    public function trial(Request $request, PresentationData $presentation): JsonResponse|RedirectResponse
+    {
+        abort_unless(config('facilitajud.trial_enabled'), 404);
+        $trial = $request->session()->get('trial_workspace');
+        $officeId = null;
+        if ($trial && ($trial['expires_at'] ?? 0) > time()) {
+            $officeId = DB::table('offices')->where('id', $trial['office_id'])->where('is_demo', true)->value('id');
+        }
+        if (! $officeId) {
+            $officeId = DB::transaction(function () use ($presentation): int {
+                $officeId = DB::table('offices')->insertGetId([
+                    'name' => 'Escritório Modelo', 'display_name' => 'Demo', 'is_demo' => true,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                DB::table('members')->insert([
+                    'office_id' => $officeId, 'name' => 'Demo', 'email' => '',
+                    'role' => 'Administrador(a)', 'account_type' => 'admin',
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                $presentation->populate($officeId);
+
+                return $officeId;
+            });
+        }
+        $request->session()->regenerate();
+        $request->session()->forget(['identity', 'neon_cookies']);
+        $request->session()->put('trial_workspace', ['office_id' => $officeId, 'expires_at' => time() + 4 * 60 * 60]);
+        $redirect = route('workspace', ['module' => 'painel']);
+
+        return $request->expectsJson() ? response()->json(['redirect' => $redirect]) : redirect()->to($redirect);
     }
 
     public function exchange(Request $request, NeonAuth $auth): JsonResponse
@@ -38,7 +71,7 @@ class AuthController extends Controller
         DB::transaction(function () use ($claims, $request): void {
             if ($request->filled('invitation')) {
                 $invite = DB::table('team_invitations')->where('token_hash', hash('sha256', $request->string('invitation')->toString()))->lockForUpdate()->first();
-                abort_unless($invite && ! $invite->accepted_at && Carbon::parse($invite->expires_at)->isFuture()
+                abort_unless($invite && ! DB::table('offices')->where('id', $invite->office_id)->value('is_demo') && ! $invite->accepted_at && Carbon::parse($invite->expires_at)->isFuture()
                     && strcasecmp($invite->email, $claims->email ?? '') === 0, 403, 'Convite inválido, expirado ou destinado a outro e-mail.');
                 $existing = DB::table('members')->where('provider_id', $claims->sub)->first();
                 abort_if($existing && $existing->office_id !== $invite->office_id, 409, 'Esta conta já pertence a outro escritório. Use o e-mail convidado para uma nova conta.');
@@ -61,6 +94,7 @@ class AuthController extends Controller
             }
         });
         $request->session()->regenerate();
+        $request->session()->forget('trial_workspace');
         $request->session()->put('identity', ['id' => $claims->sub, 'expires_at' => $claims->exp]);
         $presentationEmail = config('facilitajud.presentation_email');
         if ($presentationEmail && strcasecmp($presentationEmail, $claims->email ?? '') === 0) {
@@ -111,7 +145,10 @@ class AuthController extends Controller
             }
             try {
                 $response = $neon->call($request, $endpoints[$action], $data);
-            } catch (ConnectionException) {
+            } catch (ConnectionException $exception) {
+                $previous = $exception->getPrevious();
+                Log::warning('Neon Auth connection failed', ['action' => $action, 'code' => $previous && method_exists($previous, 'getHandlerContext') ? ($previous->getHandlerContext()['errno'] ?? null) : $exception->getCode()]);
+
                 return response()->json(['message' => 'O serviço de autenticação está indisponível. Tente novamente em instantes.'], 503);
             }
             if (! $response->successful()) {

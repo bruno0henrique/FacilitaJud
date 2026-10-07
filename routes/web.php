@@ -7,6 +7,7 @@ use App\Http\Controllers\WorkspaceController;
 use App\Http\Middleware\WorkspaceAccess;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/testar', [AuthController::class, 'trial'])->middleware('throttle:5,1')->name('trial');
 Route::get('/entrar', [AuthController::class, 'login'])->name('login');
 Route::post('/auth/neon/session', [AuthController::class, 'exchange'])->middleware('throttle:20,1')->name('auth.exchange');
 Route::post('/auth/neon/{action}', [AuthController::class, 'action'])->whereIn('action', ['login', 'register', 'recover', 'reset', 'refresh'])->middleware('throttle:20,1');

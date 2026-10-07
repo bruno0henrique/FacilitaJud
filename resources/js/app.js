@@ -383,3 +383,32 @@ const loginBackground = document.querySelector('#login-background');
 if (loginBackground) {
     import('./login-background.js').then(({ startLoginBackground }) => startLoginBackground(loginBackground)).catch(() => {});
 }
+
+const trialForm = document.querySelector('#trial-form');
+trialForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = trialForm.querySelector('button');
+    if (button.disabled) return;
+    const originalLabel = button.innerHTML;
+    const error = trialForm.querySelector('.form-error');
+    const status = trialForm.querySelector('.auth-status');
+    button.disabled = true;
+    button.classList.add('is-loading');
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Abrindo o programa…';
+    error.hidden = true;
+    status.hidden = false;
+    status.textContent = 'Preparando seu escritório.';
+    try {
+        const result = await api(trialForm.action, { method: 'POST', data: {} });
+        location.href = result.redirect;
+    } catch (exception) {
+        error.textContent = exception.message;
+        error.hidden = false;
+        status.hidden = true;
+        button.disabled = false;
+        button.classList.remove('is-loading');
+        button.removeAttribute('aria-busy');
+        button.innerHTML = originalLabel;
+    }
+});

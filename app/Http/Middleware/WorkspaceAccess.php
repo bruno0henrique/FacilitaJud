@@ -17,6 +17,25 @@ class WorkspaceAccess
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if ($trial = $request->session()->get('trial_workspace')) {
+            $office = config('facilitajud.trial_enabled') && ($trial['expires_at'] ?? 0) > time()
+                ? DB::table('offices')->where('id', $trial['office_id'])->where('is_demo', true)->first() : null;
+            $member = $office ? DB::table('members')->where('office_id', $office->id)->where('account_type', 'admin')->first() : null;
+            if (! $member) {
+                $request->session()->forget('trial_workspace');
+
+                return $request->expectsJson()
+                    ? response()->json(['message' => 'Sua sessão expirou. Entre novamente.'], 401)
+                    : redirect()->route('login');
+            }
+            $request->attributes->set('office_id', $office->id);
+            $request->attributes->set('actor', $member->name);
+            $request->attributes->set('demo', true);
+            $request->attributes->set('member_id', $member->id);
+            $request->attributes->set('is_admin', true);
+
+            return $next($request);
+        }
         $demo = ! $request->session()->has('identity') && config('facilitajud.demo') && app()->environment('local', 'testing')
             && (in_array($request->ip(), ['127.0.0.1', '::1'], true)
                 || (config('facilitajud.demo_docker_loopback') && in_array($request->getHost(), ['localhost', '127.0.0.1'], true)));

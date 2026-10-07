@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.7 — 2026-10-07
+
+- Botão Testar o programa no login, com carregamento, usuário Demo e escritório preenchido isolado por sessão, disponível localmente e em produção sem Neon Auth.
+- Sessão de teste de quatro horas, saída da conta, isolamento de registros e bloqueio da aceitação de convites do ambiente de teste por contas reais.
+- Diagnóstico de falhas de conexão do Neon Auth sem registrar credenciais.
+
 ## 0.3.6 — 2026-10-07
 
 - Removida a reação ao cursor do fundo do login; as ondas continuam animadas automaticamente.
