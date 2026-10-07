@@ -32,6 +32,8 @@ class Dashboard
             'overdueCount' => $deadlines->filter(fn ($row): bool => Carbon::parse($row->due_at)->isBefore(now()->startOfDay()))->count(),
             'weekDeadlinesCount' => $deadlines->filter(fn ($row): bool => Carbon::parse($row->due_at)->between(now()->startOfDay(), now()->addDays(7)->endOfDay()))->count(),
             'appointments' => $appointments,
+            'todayAppointmentsCount' => $appointments->filter(fn ($row): bool => Carbon::parse($row->starts_at)->isToday())->count(),
+            'todayAppointment' => $appointments->first(fn ($row): bool => Carbon::parse($row->starts_at)->isToday()),
             'weekAppointmentsCount' => $appointments->filter(fn ($row): bool => Carbon::parse($row->starts_at)->isBefore(now()->addDays(7)->endOfDay()))->count(),
             'activities' => DB::table('activities')->where('office_id', $officeId)->orderByDesc('created_at')->limit(4)->get(),
         ];

@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\LegalCase;
 use App\Models\Task;
 use App\Services\Dashboard;
+use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,12 +38,39 @@ class WorkspaceController extends Controller
         abort_unless(isset(self::MODULES[$module]), 404);
         $officeId = (int) $request->attributes->get('office_id');
         $data = $dashboard->data($officeId);
+        if (! $request->attributes->get('is_admin')) {
+            $data['deadlines'] = collect();
+            $data['dueTodayCount'] = 0;
+            $data['overdueCount'] = 0;
+        }
+        $queue = app(WorkQueueController::class)->query($request);
+        $day = $request->query('day', now()->toDateString());
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            $day = now()->toDateString();
+        }
+        try {
+            Carbon::parse($day);
+        } catch (\Throwable) {
+            $day = now()->toDateString();
+        }
+        $daily = (clone $queue)->whereBetween('due_at', [Carbon::parse($day)->startOfDay(), Carbon::parse($day)->endOfDay()]);
+        $workTotal = (clone $daily)->count();
+        $workCompleted = (clone $daily)->where('status', 'Concluído')->count();
+        $workItems = $daily->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            ->when($request->query('q'), fn ($q, $search) => $q->where(function ($q) use ($search): void {
+                $q->where('title', 'like', '%'.$search.'%')->orWhere('process_number', 'like', '%'.$search.'%');
+            }))
+            ->orderBy('due_at')->orderBy('id')->paginate(50)->withQueryString();
+        $data['queueTodayCount'] = (clone $queue)->whereBetween('due_at', [now()->startOfDay(), now()->endOfDay()])->where('status', '!=', 'Concluído')->count();
         $clients = Client::where('office_id', $officeId)->orderBy('name')->get();
         $cases = DB::table('legal_cases')->join('clients', 'clients.id', '=', 'legal_cases.client_id')
             ->where('legal_cases.office_id', $officeId)->select('legal_cases.*', 'clients.name as client_name')->orderBy('legal_cases.id')->get();
 
         return view('workspace', $data + [
             'module' => $module, 'modules' => self::MODULES,
+            'isAdmin' => $request->attributes->get('is_admin'), 'workItems' => $workItems, 'workTotal' => $workTotal,
+            'workCompleted' => $workCompleted, 'workDay' => $day,
+            'imports' => $request->attributes->get('is_admin') ? DB::table('spreadsheet_imports')->where('office_id', $officeId)->whereNotNull('mapping')->select('id', 'filename', 'created_at')->orderByDesc('id')->get() : collect(),
             'office' => DB::table('offices')->find($officeId),
             'demo' => $request->attributes->get('demo'),
             'clients' => $clients, 'cases' => $cases,
@@ -72,6 +100,9 @@ class WorkspaceController extends Controller
 
     public function store(Request $request, string $kind): JsonResponse
     {
+        if ($kind === 'deadline') {
+            abort_unless($request->attributes->get('is_admin'), 403);
+        }
         $caseRule = $this->caseRule($request);
         $rules = match ($kind) {
             'task' => ['title' => 'required|string|max:200', 'context' => 'nullable|string|max:2000',
@@ -146,6 +177,7 @@ class WorkspaceController extends Controller
 
     public function completeDeadline(Request $request, int $id): JsonResponse
     {
+        abort_unless($request->attributes->get('is_admin'), 403);
         $row = $this->owned($request, 'deadlines')->where('id', $id)->first();
         abort_unless($row, 404);
         $data = $request->validate(['completed' => 'required|boolean']);
@@ -159,6 +191,9 @@ class WorkspaceController extends Controller
 
     public function detail(Request $request, string $kind, int $id): JsonResponse
     {
+        if ($kind === 'deadline') {
+            abort_unless($request->attributes->get('is_admin'), 403);
+        }
         $table = match ($kind) {
             'case' => 'legal_cases', 'task' => 'tasks', 'client' => 'clients', 'appointment' => 'appointments', 'deadline' => 'deadlines', default => abort(404),
         };

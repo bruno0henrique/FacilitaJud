@@ -55,4 +55,17 @@ class NeonAuthTest extends TestCase
         $this->withHeader('Authorization', 'Bearer corrupted')->postJson('/auth/neon/session')->assertUnauthorized();
         $this->assertSame(0, DB::table('offices')->count());
     }
+
+    public function test_invited_employee_joins_the_admin_office_without_receiving_admin_permissions(): void
+    {
+        $this->withHeader('Authorization', 'Bearer '.$this->token())->postJson('/auth/neon/session')->assertOk();
+        $office = DB::table('members')->where('provider_id', 'neon-user-1')->value('office_id');
+        $link = $this->postJson('/api/v1/team/invite', ['email' => 'staff@example.test', 'name' => 'Funcionário convidado'])->assertOk()->json('url');
+        parse_str(parse_url($link, PHP_URL_QUERY), $query);
+        $this->withHeader('Authorization', 'Bearer '.$this->token(['sub' => 'staff-user', 'email' => 'other@example.test']))->postJson('/auth/neon/session', ['invitation' => $query['convite']])->assertForbidden();
+        $this->withHeader('Authorization', 'Bearer '.$this->token(['sub' => 'staff-user', 'email' => 'staff@example.test']))->postJson('/auth/neon/session', ['invitation' => $query['convite']])->assertOk();
+        $this->assertSame($office, DB::table('members')->where('provider_id', 'staff-user')->value('office_id'));
+        $this->assertSame(1, DB::table('offices')->count());
+        $this->postJson('/api/v1/team/invite', ['email' => 'another@example.test', 'name' => 'Outra pessoa'])->assertForbidden();
+    }
 }

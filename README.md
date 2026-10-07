@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.1.1** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.2.0** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -49,3 +49,18 @@ Judit fica como integração futura no serviço Python, com filas, histórico de
 `php artisan test --compact`, `php vendor/bin/pint --dirty --format agent`, `npm run build`, `npm audit --omit=dev` e `docker compose build app`.
 
 Os testes cobrem persistência e reabertura de tarefas, independência de prazos jurídicos, cadastros relacionados, validação, isolamento de escritórios, upload/download em banco, bloqueio da demonstração em produção e verificação criptográfica do Neon com respostas simuladas. Eles não substituem a homologação do Neon online.
+
+
+### Obrigações por planilha
+
+Em Prazos, o administrador importa `.xlsx` (10 MB, até 10.000 linhas), escolhe aba, linha dos títulos e as colunas de obrigação, data, processo e contexto. A confirmação atribui as linhas ao responsável escolhido. Datas aceitas: células de data do Excel, `dd/mm/aaaa` e ISO. Arquivos `.xls` devem ser salvos como `.xlsx`.
+
+O funcionário entra pelo convite gerado em Equipe, com o e-mail convidado, e recebe somente sua fila. Convites valem sete dias; contas já vinculadas a outro escritório não são transferidas automaticamente. Compartilhe o link diretamente: o sistema não envia convites por e-mail.
+
+Cada andamento exige uma observação e mantém histórico, autor e situação. A conclusão atualiza o resumo diário. Alterações concorrentes são recusadas para evitar sobrescrita. O administrador pode redistribuir as linhas selecionadas e baixar o Excel atualizado. O download preserva células, abas, fórmulas e estilos originais e acrescenta colunas `FacilitaJud` com responsável, situação, último andamento e atualização. O arquivo aberto no computador não é alterado automaticamente.
+
+A rotina de leitura/exportação usa Python com biblioteca padrão dentro do container. Em execução PHP nativa, `python` (Windows) ou `python3` (Linux) precisa estar no PATH. A integração Judit permanece planejada; nenhuma consulta processual externa é simulada como real.
+
+### Sessão Neon
+
+Cadastro, login, recuperação e renovação passam por endpoints do Laravel no mesmo domínio. Cookies do Neon ficam criptografados na sessão do servidor, e os JWTs são verificados por JWKS. Senhas e tokens não são devolvidos ao navegador. Cadastro sem sessão imediata apresenta a confirmação de criação e orienta a entrada, evitando repetir o cadastro.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-10-06
+
+- Autenticação Neon pelo Laravel, com cookies protegidos no servidor e tratamento de cadastro já existente.
+- Importação Excel com prévia, escolha de colunas e atribuição de obrigações a funcionários.
+- Fila diária, histórico de andamentos, conclusão, redistribuição e exportação preservando a planilha original.
+- Convites de equipe com expiração e acesso restrito às obrigações atribuídas.
+- Home com próximo passo em largura completa e dois cards: Prazos hoje e Compromissos hoje, com contagens diárias.
+- Cabeçalho de Prazos simplificado, números destacados e frase inferior da sidebar removida.
+
+
 ## 0.1.1 — 2026-10-06
 
 - Exclui dependências locais, configurações privadas e caches do envio à Vercel.

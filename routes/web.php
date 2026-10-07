@@ -1,15 +1,24 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WorkQueueController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Middleware\WorkspaceAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/entrar', [AuthController::class, 'login'])->name('login');
 Route::post('/auth/neon/session', [AuthController::class, 'exchange'])->middleware('throttle:20,1')->name('auth.exchange');
+Route::post('/auth/neon/{action}', [AuthController::class, 'action'])->whereIn('action', ['login', 'register', 'recover', 'reset', 'refresh'])->middleware('throttle:20,1');
 Route::post('/sair', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(WorkspaceAccess::class)->group(function (): void {
+    Route::post('/api/v1/work/preview', [WorkQueueController::class, 'preview']);
+    Route::post('/api/v1/work/import/{id}', [WorkQueueController::class, 'import']);
+    Route::post('/api/v1/work/assign', [WorkQueueController::class, 'assign']);
+    Route::get('/api/v1/work/{id}', [WorkQueueController::class, 'detail']);
+    Route::patch('/api/v1/work/{id}', [WorkQueueController::class, 'update']);
+    Route::get('/prazos/planilha/{id}', [WorkQueueController::class, 'export'])->name('work.export');
+    Route::post('/api/v1/team/invite', [WorkQueueController::class, 'invite']);
     Route::get('/', [WorkspaceController::class, 'index'])->name('home');
     Route::post('/api/v1/records/{kind}', [WorkspaceController::class, 'store'])->name('records.store');
     Route::get('/api/v1/records/{kind}/{id}', [WorkspaceController::class, 'detail'])->name('records.show');

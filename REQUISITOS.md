@@ -9,3 +9,14 @@
 - Produção: autenticação obrigatória, escritório por identidade, demonstração desabilitada, chaves fora do Git, sessão e cache no banco. Documentos armazenados no banco para independência do disco efêmero.
 - Publicação: projeto Vercel `facilitajud` criado e preset Container configurado; conectar PostgreSQL e Neon Auth e homologar antes de declarar a versão online funcional.
 - Judit provável e futura: nenhuma consulta implementada ou resultado judicial simulado como integração real.
+
+
+## Refinamento aprovado em 06/10/2026
+
+- Prazos inclui obrigações diárias importadas do Excel pelo administrador e distribuídas por funcionário.
+- Funcionários acessam somente as obrigações atribuídas; atualizações mantêm histórico e refletem no Excel exportado.
+- A planilha original é preservada. Não existe sincronização automática com um arquivo aberto no computador.
+- Home: card operacional em largura completa acima de dois cards menores; títulos Prazos hoje e Compromissos hoje, sem indicadores de sete dias nessa composição.
+- Prazos: apenas título no cabeçalho, quantidade pendente em destaque e dados complementares ao lado.
+- Retirar a frase Um lugar para cada detalhe da sidebar.
+- Corrigir cadastro e login após criação de conta no Neon.

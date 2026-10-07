@@ -25,6 +25,9 @@ class WorkspaceAccess
             $request->attributes->set('office_id', $office->id);
             $request->attributes->set('actor', $office->display_name);
             $request->attributes->set('demo', true);
+            $member = DB::table('members')->where('office_id', $office->id)->first();
+            $request->attributes->set('member_id', $member?->id);
+            $request->attributes->set('is_admin', true);
 
             return $next($request);
         }
@@ -40,6 +43,8 @@ class WorkspaceAccess
         $request->attributes->set('office_id', $member->office_id);
         $request->attributes->set('actor', $member->name);
         $request->attributes->set('demo', false);
+        $request->attributes->set('member_id', $member->id);
+        $request->attributes->set('is_admin', str_starts_with($member->role, 'Admin'));
 
         return $next($request);
     }

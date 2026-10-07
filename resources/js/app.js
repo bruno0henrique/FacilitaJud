@@ -224,7 +224,8 @@ function updateSummary(data) {
     document.querySelector('#next-context').textContent = data.next?.context || 'Adicione uma nova tarefa para planejar o próximo passo.';
     const priority = document.querySelector('#next-priority'); priority.textContent = data.next ? `Prioridade ${data.next.priority}` : 'Tudo organizado';
     priority.className = `badge ${data.next?.priority === 'Alta' ? 'pink' : 'lavender'}`;
-    document.querySelector('#next-due').textContent = data.next ? `Prazo: ${dateTime(data.next.due_at)}` : 'Uma rotina mais leve começa aqui.';
+    document.querySelector('#next-due-label').textContent = data.next ? dateTime(data.next.due_at).split(',')[0] : 'Tudo em dia';
+    document.querySelector('#next-due-time').textContent = data.next ? parseDate(data.next.due_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '✓';
     document.querySelector('#open-next').textContent = data.next ? 'Abrir tarefa →' : 'Criar tarefa';
 }
 document.querySelector('#open-next')?.addEventListener('click', () => {
@@ -276,3 +277,72 @@ const notice = sessionStorage.getItem('facilitajud-notice'); if (notice) { sessi
 
 const neonUrl = document.querySelector('meta[name="neon-auth-url"]').content;
 if (neonUrl) import('./neon-auth.js').then(({ setupNeonAuth }) => setupNeonAuth({ neonUrl, api, toast, currentModule })).catch(() => toast('Não foi possível carregar a autenticação. Recarregue a página.', true));
+
+if (currentModule === 'prazos') {
+    const dialog = document.querySelector('#work-dialog');
+    const form = document.querySelector('#work-form');
+    let active;
+    document.querySelectorAll('[data-work-open]').forEach(button => button.addEventListener('click', async () => {
+        try {
+            const data = await api(`/api/v1/work/${button.dataset.workOpen}`); active = data.item;
+            document.querySelector('#work-title').textContent = active.title;
+            document.querySelector('#work-context').textContent = `${active.process_number || 'Processo não informado'} · ${active.context || ''}`;
+            form.elements.status.value = active.status; form.elements.note.value = active.note || '';
+            form.querySelector('.form-error').hidden = true;
+            const history = document.querySelector('#work-history'); history.replaceChildren();
+            for (const entry of data.history) { const row = element('div', entry.note); row.append(element('small', `${entry.actor} · ${entry.status} · ${dateTime(entry.created_at)}`)); history.append(row); }
+            if (!data.history.length) history.append(element('p', 'Nenhum andamento registrado.', 'metadata'));
+            dialog.showModal();
+        } catch (error) { toast(error.message, true); }
+    }));
+    dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+    form.addEventListener('submit', async event => {
+        event.preventDefault(); const button = form.querySelector('button'); button.disabled = true;
+        try { await api(`/api/v1/work/${active.id}`, { method: 'PATCH', data: { status: form.elements.status.value, note: form.elements.note.value, version: active.version } }); location.reload(); }
+        catch (error) { const node = form.querySelector('.form-error'); node.textContent = error.message; node.hidden = false; }
+        finally { button.disabled = false; }
+    });
+    document.querySelector('#select-work')?.addEventListener('change', event => document.querySelectorAll('[data-work-select]').forEach(node => { node.checked = event.target.checked; }));
+    document.querySelector('#assign-work')?.addEventListener('click', async () => {
+        const ids = [...document.querySelectorAll('[data-work-select]:checked')].map(node => Number(node.value));
+        if (!ids.length) { toast('Selecione as obrigações para atribuir.', true); return; }
+        try { await api('/api/v1/work/assign', { method: 'POST', data: { ids, member_id: Number(document.querySelector('#assign-member').value) } }); location.reload(); }
+        catch (error) { toast(error.message, true); }
+    });
+    const excelDialog = document.querySelector('#excel-dialog');
+    if (excelDialog) {
+        const excelForm = document.querySelector('#excel-form'); let preview;
+        document.querySelector('#import-excel').addEventListener('click', () => excelDialog.showModal());
+        excelDialog.querySelector('.dialog-close').addEventListener('click', () => excelDialog.close());
+        const invalidate = () => { preview = null; document.querySelector('#excel-mapping').hidden = true; };
+        ['file', 'sheet', 'header_row'].forEach(name => excelForm.elements[name].addEventListener('change', invalidate));
+        function showError(error) { const node = excelForm.querySelector('.form-error'); node.textContent = error.message; node.hidden = false; }
+        document.querySelector('#preview-excel').addEventListener('click', async event => {
+            if (!excelForm.elements.file.files.length) { excelForm.elements.file.reportValidity(); return; }
+            event.target.disabled = true; excelForm.querySelector('.form-error').hidden = true;
+            try {
+                preview = await api('/api/v1/work/preview', { method: 'POST', data: new FormData(excelForm) });
+                const sheet = excelForm.elements.sheet; sheet.replaceChildren();
+                preview.sheets.forEach(name => { const option = element('option', name); option.value = name; sheet.append(option); }); sheet.value = preview.sheet;
+                document.querySelector('#excel-count').textContent = `${preview.total} linhas encontradas. Escolha as colunas e o responsável.`;
+                document.querySelectorAll('[data-excel-column]').forEach(select => {
+                    select.replaceChildren(element('option', 'Selecione')); select.firstChild.value = '';
+                    Object.entries(preview.headers).forEach(([column,title]) => { const option = element('option', `${column} · ${title}`); option.value = column; select.append(option); });
+                });
+                document.querySelector('#excel-preview').textContent = preview.rows.map(row => `Linha ${row.row}: ${Object.values(row.values).join(' · ')}`).join('\n');
+                document.querySelector('#excel-mapping').hidden = false;
+            } catch (error) { showError(error); } finally { event.target.disabled = false; }
+        });
+        excelForm.addEventListener('submit', async event => {
+            event.preventDefault(); if (!preview) return; const button = excelForm.querySelector('[type=submit], #excel-mapping button'); button.disabled = true;
+            const mapping = {}; document.querySelectorAll('[data-excel-column]').forEach(node => { mapping[node.dataset.excelColumn] = node.value || null; });
+            try { await api(`/api/v1/work/import/${preview.id}`, { method: 'POST', data: { mapping, sheet: preview.sheet, header_row: Number(excelForm.elements.header_row.value), assigned_member_id: Number(excelForm.elements.assigned_member_id.value) } }); location.reload(); }
+            catch (error) { showError(error); } finally { button.disabled = false; }
+        });
+    }
+}
+document.querySelector('#invite-form')?.addEventListener('submit', async event => {
+    event.preventDefault(); const form = event.target; const button = form.querySelector('button'); button.disabled = true;
+    try { const data = await api('/api/v1/team/invite', { method: 'POST', data: { name: form.elements.name.value, email: form.elements.email.value } }); const input = document.querySelector('#invite-url'); input.value = data.url; input.hidden = false; input.select(); }
+    catch (error) { toast(error.message, true); } finally { button.disabled = false; }
+});
