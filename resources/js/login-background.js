@@ -10,9 +10,6 @@ uniform float waveFrequency;
 uniform float waveAmplitude;
 uniform vec3 waveColor;
 uniform vec3 backgroundColor;
-uniform vec2 mousePos;
-uniform int enableMouseInteraction;
-uniform float mouseRadius;
 
 vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -97,11 +94,6 @@ void main() {
   vec2 uv = pixel / resolution - 0.5;
   uv.x *= resolution.x / resolution.y;
   float f = pattern(uv);
-  vec2 mouseNDC = (mousePos / resolution - 0.5) * vec2(1.0, -1.0);
-  mouseNDC.x *= resolution.x / resolution.y;
-  if (enableMouseInteraction == 1) {
-    f -= 0.5 * (1.0 - smoothstep(0.0, mouseRadius, length(uv - mouseNDC)));
-  }
   vec3 color = mix(backgroundColor, waveColor, clamp(f, 0.0, 1.0));
   fragmentColor = vec4(dither(gl_FragCoord.xy / resolution, color), 1.0);
 }`;
@@ -148,17 +140,13 @@ export function startLoginBackground(canvas) {
     const uniform = name => gl.getUniformLocation(program, name);
     const resolution = uniform('resolution');
     const time = uniform('time');
-    const mouse = uniform('mousePos');
-    const interaction = uniform('enableMouseInteraction');
     gl.uniform1f(uniform('waveSpeed'), 0.05);
     gl.uniform1f(uniform('waveFrequency'), 3);
     gl.uniform1f(uniform('waveAmplitude'), 0.3);
     gl.uniform3f(uniform('waveColor'), 0.59, 0.63, 0.84);
     gl.uniform3f(uniform('backgroundColor'), 0.93, 0.92, 0.99);
-    gl.uniform1f(uniform('mouseRadius'), 0.8);
     gl.uniform1f(uniform('colorNum'), 16);
     gl.uniform1f(uniform('pixelSize'), 2);
-    gl.uniform2f(mouse, -10000, -10000);
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let elapsed = 0;
     let lastTick = 0;
@@ -177,7 +165,6 @@ export function startLoginBackground(canvas) {
     const resume = () => {
         stop();
         lastTick = 0;
-        gl.uniform1i(interaction, reducedMotion.matches ? 0 : 1);
         if (disposed || document.hidden) return;
         draw();
         if (!reducedMotion.matches) frame = requestAnimationFrame(tick);
@@ -191,16 +178,12 @@ export function startLoginBackground(canvas) {
         gl.uniform2f(resolution, canvas.width, canvas.height);
         draw();
     };
-    const move = event => {
-        gl.uniform2f(mouse, event.clientX * canvas.width / innerWidth, event.clientY * canvas.height / innerHeight);
-    };
     const contextLost = event => { event.preventDefault(); dispose(); canvas.hidden = true; };
     const dispose = () => {
         if (disposed) return;
         disposed = true;
         stop();
         window.removeEventListener('resize', resize);
-        window.removeEventListener('pointermove', move);
         document.removeEventListener('visibilitychange', resume);
         reducedMotion.removeEventListener('change', resume);
         window.removeEventListener('pagehide', dispose);
@@ -210,7 +193,6 @@ export function startLoginBackground(canvas) {
         gl.deleteProgram(program);
     };
     window.addEventListener('resize', resize, { passive: true });
-    window.addEventListener('pointermove', move, { passive: true });
     document.addEventListener('visibilitychange', resume);
     reducedMotion.addEventListener('change', resume);
     window.addEventListener('pagehide', dispose, { once: true });

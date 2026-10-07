@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.6 — 2026-10-07
+
+- Removida a reação ao cursor do fundo do login; as ondas continuam animadas automaticamente.
+
 ## 0.3.5 — 2026-10-07
 
 - Fundo do login com ondas e dithering da referência enviada, adaptados para WebGL sem novas dependências, na paleta lavanda da marca.
