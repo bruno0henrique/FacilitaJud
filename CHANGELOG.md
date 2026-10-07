@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.5 — 2026-10-07
+
+- Fundo do login com ondas e dithering da referência enviada, adaptados para WebGL sem novas dependências, na paleta lavanda da marca.
+- Renderização limitada a 24 quadros por segundo e resolução controlada, pausa em abas ocultas, preferência por movimento reduzido e fundo estático quando WebGL não estiver disponível.
+
 ## 0.3.4 — 2026-10-07
 
 - Login, cadastro e alteração de senha apresentam progresso; login mantém o estado até a navegação e bloqueia envios repetidos.

@@ -378,3 +378,8 @@ if (assignment) {
         catch(error) { toast(error.message, true); } finally { button.disabled = false; }
     });
 }
+
+const loginBackground = document.querySelector('#login-background');
+if (loginBackground) {
+    import('./login-background.js').then(({ startLoginBackground }) => startLoginBackground(loginBackground)).catch(() => {});
+}
