@@ -123,9 +123,9 @@ async function openDetail(kind, id, editing = false) {
     actions.replaceChildren();
     detailDialog.showModal();
     try {
-        const { record, related } = await api(`/api/v1/records/${kind}/${id}`, { signal });
+        const { record, related, can_edit } = await api(`/api/v1/records/${kind}/${id}`, { signal });
         if (signal.aborted || !detailDialog.open) return;
-        if (editing) { openEditor('task', record); return; }
+        if (editing && can_edit) { openEditor('task', record); return; }
         document.querySelector('#detail-title').textContent = record.title || record.name;
         content.replaceChildren();
         const list = element('dl', undefined, 'detail-grid');
@@ -163,7 +163,7 @@ async function openDetail(kind, id, editing = false) {
                 content.append(section);
             }
         }
-        if (kind === 'task') {
+        if (kind === 'task' && can_edit) {
             const button = element('button', 'Editar tarefa', 'button subtle');
             button.addEventListener('click', () => openEditor('task', record)); actions.append(button);
         }
@@ -227,7 +227,8 @@ function updateSummary(data) {
     priority.className = `badge ${data.next?.priority === 'Alta' ? 'pink' : 'lavender'}`;
     document.querySelector('#next-due-label').textContent = data.next ? dateTime(data.next.due_at).split(',')[0] : 'Tudo em dia';
     document.querySelector('#next-due-time').textContent = data.next ? parseDate(data.next.due_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) : '✓';
-    document.querySelector('#open-next').textContent = data.next ? 'Abrir tarefa →' : 'Criar tarefa';
+    document.querySelector('#open-next').textContent = data.next ? 'Abrir tarefa →' : 'Tudo em dia';
+    document.querySelector('#open-next').disabled = !data.next;
 }
 document.querySelector('#next-action[data-next-kind=task] #open-next')?.addEventListener('click', () => {
     const id = document.querySelector('#next-action').dataset.nextId;
@@ -344,6 +345,36 @@ if (document.querySelector('#work-dialog')) {
 }
 document.querySelector('#invite-form')?.addEventListener('submit', async event => {
     event.preventDefault(); const form = event.target; const button = form.querySelector('button'); button.disabled = true;
-    try { const data = await api('/api/v1/team/invite', { method: 'POST', data: { name: form.elements.name.value, email: form.elements.email.value } }); const input = document.querySelector('#invite-url'); input.value = data.url; input.hidden = false; input.select(); }
+    try { const data = await api('/api/v1/team/invite', { method: 'POST', data: teamData(form) }); const input = document.querySelector('#invite-url'); input.value = data.url; input.hidden = false; input.select(); document.querySelector('#copy-invite').hidden = false; }
     catch (error) { toast(error.message, true); } finally { button.disabled = false; }
 });
+
+function teamData(form) {
+    const data = Object.fromEntries(new FormData(form)); data.category_id = data.category_id || null;
+    data.permissions = !form.elements.custom_permissions || form.elements.custom_permissions.checked ? [...form.querySelectorAll('[name="permissions[]"]:checked')].map(input => input.value) : null;
+    delete data['permissions[]']; delete data.custom_permissions; return data;
+}
+document.querySelectorAll('.team-form').forEach(form => form.addEventListener('submit', async event => {
+    event.preventDefault(); const button = form.querySelector('button'); button.disabled = true;
+    try { await api(form.dataset.teamEndpoint, {method: form.dataset.teamMethod, data: teamData(form)}); location.reload(); }
+    catch(error) { toast(error.message, true); } finally { button.disabled = false; }
+}));
+document.querySelectorAll('[name="custom_permissions"]').forEach(input => {
+    const update = () => { const grid = input.closest('form').querySelector('.permission-grid'); grid.hidden = !input.checked; grid.querySelectorAll('input').forEach(box => { box.disabled = !input.checked; }); };
+    input.addEventListener('change', update); update();
+});
+document.querySelector('#copy-invite')?.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(document.querySelector('#invite-url').value); toast('Link copiado.'); }
+    catch { document.querySelector('#invite-url').select(); toast('Selecione e copie o link do convite.'); }
+});
+const assignment = document.querySelector('#record-assignment');
+if (assignment) {
+    const options = [...assignment.elements.record.options].map(option => option.cloneNode(true));
+    const update = () => { assignment.elements.record.replaceChildren(...options.filter(option => option.dataset.kind === assignment.elements.kind.value).map(option => option.cloneNode(true))); };
+    assignment.elements.kind.addEventListener('change', update); update();
+    assignment.addEventListener('submit', async event => {
+        event.preventDefault(); const button = assignment.querySelector('button'); button.disabled = true;
+        try { await api(`/api/v1/team/assign/${assignment.elements.kind.value}/${assignment.elements.record.value}`, {method: 'PATCH', data: {assigned_member_id: assignment.elements.assigned_member_id.value || null}}); toast('Responsável atualizado.'); }
+        catch(error) { toast(error.message, true); } finally { button.disabled = false; }
+    });
+}

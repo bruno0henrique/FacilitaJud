@@ -42,7 +42,7 @@ class AuthController extends Controller
                 $existing = DB::table('members')->where('provider_id', $claims->sub)->first();
                 abort_if($existing && $existing->office_id !== $invite->office_id, 409, 'Esta conta já pertence a outro escritório. Use o e-mail convidado para uma nova conta.');
                 if (! $existing) {
-                    DB::table('members')->insert(['office_id' => $invite->office_id, 'provider_id' => $claims->sub, 'name' => $invite->name, 'email' => $invite->email, 'role' => 'Funcionário(a)', 'created_at' => now(), 'updated_at' => now()]);
+                    DB::table('members')->insert(['office_id' => $invite->office_id, 'provider_id' => $claims->sub, 'name' => $invite->name, 'email' => $invite->email, 'role' => 'Associado(a)', 'account_type' => 'associate', 'category_id' => $invite->category_id, 'permissions' => $invite->permissions, 'responsibilities' => $invite->responsibilities, 'created_at' => now(), 'updated_at' => now()]);
                 }
                 DB::table('team_invitations')->where('id', $invite->id)->update(['accepted_at' => now()]);
             }
@@ -54,7 +54,7 @@ class AuthController extends Controller
                 ]);
                 DB::table('members')->insert([
                     'office_id' => $officeId, 'provider_id' => $claims->sub,
-                    'name' => $name, 'email' => $claims->email ?? '', 'role' => 'Administrador(a)',
+                    'name' => $name, 'email' => $claims->email ?? '', 'role' => 'Administrador(a)', 'account_type' => 'admin',
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
             }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\WorkspacePermissions;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ class WorkspaceAccess
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $demo = config('facilitajud.demo') && app()->environment('local', 'testing')
+        $demo = ! $request->session()->has('identity') && config('facilitajud.demo') && app()->environment('local', 'testing')
             && (in_array($request->ip(), ['127.0.0.1', '::1'], true)
                 || (config('facilitajud.demo_docker_loopback') && in_array($request->getHost(), ['localhost', '127.0.0.1'], true)));
         if ($demo) {
@@ -44,7 +45,10 @@ class WorkspaceAccess
         $request->attributes->set('actor', $member->name);
         $request->attributes->set('demo', false);
         $request->attributes->set('member_id', $member->id);
-        $request->attributes->set('is_admin', str_starts_with($member->role, 'Admin'));
+        $request->attributes->set('is_admin', $member->account_type === 'admin');
+
+        $category = $member->category_id ? DB::table('team_categories')->where('office_id', $member->office_id)->find($member->category_id) : null;
+        $request->attributes->set('permissions', json_decode($member->permissions ?? $category?->permissions ?? 'null', true) ?? WorkspacePermissions::DEFAULTS);
 
         return $next($request);
     }

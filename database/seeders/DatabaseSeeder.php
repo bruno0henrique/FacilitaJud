@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         DB::transaction(function (): void {
             $office = DB::table('offices')->insertGetId(['name' => 'Escritório Helena Souza', 'display_name' => 'Dra. Helena', 'is_demo' => true, 'created_at' => now(), 'updated_at' => now()]);
             foreach ([['Helena Souza', 'Administradora'], ['Rafael Lima', 'Advogado'], ['Beatriz Santos', 'Assistente jurídica']] as [$name, $role]) {
-                DB::table('members')->insert(['office_id' => $office, 'name' => $name, 'email' => '', 'role' => $role, 'created_at' => now(), 'updated_at' => now()]);
+                DB::table('members')->insert(['office_id' => $office, 'name' => $name, 'email' => '', 'role' => $role, 'account_type' => $role === 'Administradora' ? 'admin' : 'associate', 'created_at' => now(), 'updated_at' => now()]);
             }
             $clients = [];
             foreach (['Mariana Torres', 'Rafael Antunes', 'Ana Costa', 'Carlos Oliveira'] as $name) {

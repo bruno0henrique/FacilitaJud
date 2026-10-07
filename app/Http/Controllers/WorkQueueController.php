@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ExcelWorkbook;
+use App\Services\WorkspacePermissions;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -21,8 +22,7 @@ class WorkQueueController extends Controller
 
     public function query(Request $request): Builder
     {
-        return DB::table('work_items')->where('office_id', $request->attributes->get('office_id'))
-            ->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('assigned_member_id', $request->attributes->get('member_id')));
+        return app(WorkspacePermissions::class)->query($request, 'work_items');
     }
 
     public function preview(Request $request, ExcelWorkbook $excel): JsonResponse
@@ -102,6 +102,7 @@ class WorkQueueController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
+        abort_unless(app(WorkspacePermissions::class)->allows($request, 'prazos.update'), 403);
         $data = $request->validate(['version' => 'required|integer|min:1', 'status' => ['required', Rule::in(['Pendente', 'Em andamento', 'Concluído'])], 'note' => 'required|string|max:10000']);
         DB::transaction(function () use ($request, $id, $data): void {
             $item = $this->query($request)->lockForUpdate()->find($id);
@@ -142,15 +143,5 @@ class WorkQueueController extends Controller
 
         return response(base64_decode($out['contents']))->header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             ->header('Content-Disposition', 'attachment; filename="prazos-atualizados-'.$id.'.xlsx"')->header('Cache-Control', 'private, no-store')->header('X-Content-Type-Options', 'nosniff');
-    }
-
-    public function invite(Request $request): JsonResponse
-    {
-        $this->admin($request);
-        $data = $request->validate(['email' => 'required|email|max:254', 'name' => 'required|string|max:120']);
-        $token = bin2hex(random_bytes(32));
-        DB::table('team_invitations')->insert($data + ['office_id' => $request->attributes->get('office_id'), 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7), 'created_at' => now(), 'updated_at' => now()]);
-
-        return response()->json(['url' => rtrim(config('app.url'), '/').'/entrar?convite='.$token]);
     }
 }

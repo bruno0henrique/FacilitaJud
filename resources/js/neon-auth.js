@@ -7,7 +7,7 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
         document.querySelector('#signup-name').hidden = !signup;
         form.elements.name.required = signup;
         form.elements.password.autocomplete = signup ? 'new-password' : 'current-password';
-        form.querySelector('[type="submit"]').textContent = signup ? 'Criar meu escritório' : 'Entrar no escritório';
+        form.querySelector('[type="submit"]').textContent = signup ? (new URLSearchParams(location.search).has('convite') ? 'Criar minha conta de associado' : 'Criar meu escritório') : 'Entrar no escritório';
         toggle.textContent = signup ? 'Já tenho conta' : 'Criar conta';
     }
     toggle?.addEventListener('click', () => { signup = !signup; mode(); });

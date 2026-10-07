@@ -38,3 +38,5 @@ Thumbs.db
 /storage/app/private/offices
 
 .vercel
+
+/public/fonts

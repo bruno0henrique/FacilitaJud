@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\LegalCase;
 use App\Models\Task;
 use App\Services\Dashboard;
+use App\Services\WorkspacePermissions;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +38,9 @@ class WorkspaceController extends Controller
     {
         abort_unless(isset(self::MODULES[$module]), 404);
         $officeId = (int) $request->attributes->get('office_id');
-        $data = $dashboard->data($officeId);
+        $access = app(WorkspacePermissions::class);
+        abort_unless($access->module($request, $module), 403);
+        $data = $dashboard->data($officeId, $request);
         if (! $request->attributes->get('is_admin')) {
             $data['deadlines'] = collect();
             $data['dueTodayCount'] = 0;
@@ -64,12 +67,15 @@ class WorkspaceController extends Controller
             }))
             ->orderBy('due_at')->orderBy('id')->paginate(50)->withQueryString();
         $data['queueTodayCount'] = (clone $queue)->whereBetween('due_at', [now()->startOfDay(), now()->endOfDay()])->where('status', '!=', 'Concluído')->count();
-        $clients = Client::where('office_id', $officeId)->orderBy('name')->get();
-        $cases = DB::table('legal_cases')->join('clients', 'clients.id', '=', 'legal_cases.client_id')
+        $clients = $access->query($request, 'clients')->orderBy('name')->get();
+        $caseQuery = $module === 'documentos' && $access->allows($request, 'documentos.upload') ? DB::table('legal_cases')->where('legal_cases.office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('assigned_member_id', $request->attributes->get('member_id'))) : $access->query($request, 'legal_cases');
+        $cases = $caseQuery->join('clients', 'clients.id', '=', 'legal_cases.client_id')
             ->where('legal_cases.office_id', $officeId)->select('legal_cases.*', 'clients.name as client_name')->orderBy('legal_cases.id')->get();
 
         return view('workspace', $data + [
-            'module' => $module, 'modules' => self::MODULES,
+            'module' => $module, 'modules' => array_filter(self::MODULES, fn ($value, $key) => $access->module($request, $key), ARRAY_FILTER_USE_BOTH),
+            'access' => $access, 'actor' => $request->attributes->get('actor'), 'permissionOptions' => WorkspacePermissions::OPTIONS,
+            'categories' => DB::table('team_categories')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->whereIn('id', DB::table('members')->where('id', $request->attributes->get('member_id'))->select('category_id')))->orderBy('name')->get(),
             'isAdmin' => $request->attributes->get('is_admin'), 'workItems' => $workItems, 'workTotal' => $workTotal,
             'primaryWork' => $primaryWork,
             'workCompleted' => $workCompleted, 'workDay' => $day,
@@ -77,20 +83,20 @@ class WorkspaceController extends Controller
             'office' => DB::table('offices')->find($officeId),
             'demo' => $request->attributes->get('demo'),
             'clients' => $clients, 'cases' => $cases,
-            'documents' => Document::where('office_id', $officeId)->select('id', 'name', 'legal_case_id', 'mime', 'size', 'created_at')->orderByDesc('created_at')->get(),
-            'members' => DB::table('members')->where('office_id', $officeId)->orderBy('name')->get(),
-            'messages' => DB::table('messages')->where('office_id', $officeId)->orderBy('created_at')->get(),
+            'documents' => $access->query($request, 'documents')->select('id', 'name', 'legal_case_id', 'mime', 'size', 'created_at')->orderByDesc('created_at')->get(),
+            'members' => DB::table('members')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('id', $request->attributes->get('member_id')))->orderBy('name')->get(),
+            'messages' => $access->query($request, 'messages')->orderBy('created_at')->get(),
         ]);
     }
 
     private function owned(Request $request, string $table): Builder
     {
-        return DB::table($table)->where('office_id', $request->attributes->get('office_id'));
+        return app(WorkspacePermissions::class)->query($request, $table);
     }
 
     private function caseRule(Request $request): mixed
     {
-        return Rule::exists('legal_cases', 'id')->where('office_id', $request->attributes->get('office_id'));
+        return Rule::exists('legal_cases', 'id')->where(fn ($q) => $q->where('office_id', $request->attributes->get('office_id'))->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('assigned_member_id', $request->attributes->get('member_id'))));
     }
 
     private function activity(Request $request, string $description, string $kind = 'task'): void
@@ -103,6 +109,7 @@ class WorkspaceController extends Controller
 
     public function store(Request $request, string $kind): JsonResponse
     {
+        abort_unless($request->attributes->get('is_admin'), 403);
         if ($kind === 'deadline') {
             abort_unless($request->attributes->get('is_admin'), 403);
         }
@@ -147,7 +154,10 @@ class WorkspaceController extends Controller
     public function completeTask(Request $request, int $id, Dashboard $dashboard): JsonResponse
     {
         $data = $request->validate(['completed' => 'required|boolean']);
-        $task = Task::where('office_id', $request->attributes->get('office_id'))->findOrFail($id);
+        abort_unless(app(WorkspacePermissions::class)->allows($request, 'tarefas.update'), 403);
+        $row = $this->owned($request, 'tasks')->where('id', $id)->first();
+        abort_unless($row, 404);
+        $task = Task::findOrFail($row->id);
         DB::transaction(function () use ($request, $task, $data): void {
             $changed = ($task->completed_at !== null) !== $data['completed'];
             $task->update(['completed_at' => $data['completed'] ? ($task->completed_at ?? now()) : null]);
@@ -155,7 +165,7 @@ class WorkspaceController extends Controller
                 $this->activity($request, ($data['completed'] ? 'Tarefa concluída: ' : 'Tarefa reaberta: ').$task->title);
             }
         });
-        $summary = $dashboard->data((int) $request->attributes->get('office_id'));
+        $summary = $dashboard->data((int) $request->attributes->get('office_id'), $request);
 
         return response()->json([
             'completed' => $task->completed_at !== null,
@@ -166,10 +176,16 @@ class WorkspaceController extends Controller
 
     public function updateTask(Request $request, int $id): JsonResponse
     {
-        $task = Task::where('office_id', $request->attributes->get('office_id'))->findOrFail($id);
+        abort_unless(app(WorkspacePermissions::class)->allows($request, 'tarefas.update'), 403);
+        $row = $this->owned($request, 'tasks')->where('id', $id)->first();
+        abort_unless($row, 404);
+        $task = Task::findOrFail($row->id);
         $data = $request->validate(['title' => 'required|string|max:200', 'context' => 'nullable|string|max:2000',
             'due_at' => 'required|date', 'priority' => ['required', Rule::in(['Alta', 'Média', 'Baixa'])],
-            'legal_case_id' => ['nullable', $this->caseRule($request)]]);
+            'legal_case_id' => $request->attributes->get('is_admin') ? ['nullable', $this->caseRule($request)] : ['nullable', Rule::in([$task->legal_case_id])]]);
+        if (! $request->attributes->get('is_admin')) {
+            $data['legal_case_id'] = $task->legal_case_id;
+        }
         DB::transaction(function () use ($task, $data, $request): void {
             $task->update($data);
             $this->activity($request, 'Tarefa atualizada: '.$task->title);
@@ -210,11 +226,15 @@ class WorkspaceController extends Controller
             $related['documents'] = $this->owned($request, 'documents')->where('legal_case_id', $id)->select('id', 'name')->get();
         }
 
-        return response()->json(['record' => $record, 'related' => $related]);
+        return response()->json(['record' => $record, 'related' => $related, 'can_edit' => $kind === 'task' && app(WorkspacePermissions::class)->allows($request, 'tarefas.update')]);
     }
 
     public function upload(Request $request): JsonResponse
     {
+        abort_unless(app(WorkspacePermissions::class)->allows($request, 'documentos.upload'), 403);
+        if (! $request->attributes->get('is_admin')) {
+            abort_unless($request->filled('legal_case_id'), 422);
+        }
         $data = $request->validate(['file' => 'required|file|mimes:pdf,doc,docx,txt,jpg,jpeg,png|max:10240',
             'legal_case_id' => ['nullable', $this->caseRule($request)]]);
         $file = $request->file('file');
@@ -240,7 +260,9 @@ class WorkspaceController extends Controller
 
     public function download(Request $request, int $id): StreamedResponse
     {
-        $document = Document::where('office_id', $request->attributes->get('office_id'))->findOrFail($id);
+        $row = $this->owned($request, 'documents')->where('id', $id)->first();
+        abort_unless($row, 404);
+        $document = Document::findOrFail($row->id);
         if ($document->path === 'database') {
             return response()->streamDownload(function () use ($document): void {
                 echo base64_decode($document->contents, true);
@@ -253,6 +275,7 @@ class WorkspaceController extends Controller
 
     public function settings(Request $request): JsonResponse
     {
+        abort_unless($request->attributes->get('is_admin'), 403);
         $data = $request->validate(['name' => 'required|string|max:160', 'display_name' => 'required|string|max:120', 'reminders' => 'required|boolean']);
         DB::transaction(function () use ($request, $data): void {
             DB::table('offices')->where('id', $request->attributes->get('office_id'))->update($data + ['updated_at' => now()]);

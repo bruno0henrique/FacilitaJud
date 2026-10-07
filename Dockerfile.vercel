@@ -20,6 +20,7 @@ RUN rm -f /app/bootstrap/cache/*.php \
     && composer dump-autoload --no-dev --optimize --no-scripts \
     && php artisan package:discover --ansi
 COPY --from=frontend /app/public/build /app/public/build
+COPY --from=frontend /app/public/fonts /app/public/fonts
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/facilitajud-entrypoint
 RUN chmod +x /usr/local/bin/facilitajud-entrypoint \

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WorkQueueController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Middleware\WorkspaceAccess;
@@ -18,7 +19,11 @@ Route::middleware(WorkspaceAccess::class)->group(function (): void {
     Route::get('/api/v1/work/{id}', [WorkQueueController::class, 'detail']);
     Route::patch('/api/v1/work/{id}', [WorkQueueController::class, 'update']);
     Route::get('/prazos/planilha/{id}', [WorkQueueController::class, 'export'])->name('work.export');
-    Route::post('/api/v1/team/invite', [WorkQueueController::class, 'invite']);
+    Route::post('/api/v1/team/invite', [TeamController::class, 'invite']);
+    Route::post('/api/v1/team/categories', [TeamController::class, 'category']);
+    Route::patch('/api/v1/team/categories/{id}', [TeamController::class, 'category']);
+    Route::patch('/api/v1/team/members/{id}', [TeamController::class, 'member']);
+    Route::patch('/api/v1/team/assign/{kind}/{id}', [TeamController::class, 'assign']);
     Route::get('/', [WorkspaceController::class, 'index'])->name('home');
     Route::post('/api/v1/records/{kind}', [WorkspaceController::class, 'store'])->name('records.store');
     Route::get('/api/v1/records/{kind}/{id}', [WorkspaceController::class, 'detail'])->name('records.show');

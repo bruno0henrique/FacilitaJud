@@ -17,7 +17,7 @@ class NeonAuthTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['facilitajud.demo' => false, 'facilitajud.auth_provider' => 'neon',
+        config(['facilitajud.demo' => false, 'facilitajud.auth_provider' => 'neon', 'facilitajud.neon_jwks' => null,
             'facilitajud.neon_url' => 'https://auth.example.test/neondb/auth']);
         $pair = sodium_crypto_sign_keypair();
         $this->secret = base64_encode(sodium_crypto_sign_secretkey($pair));
@@ -60,12 +60,14 @@ class NeonAuthTest extends TestCase
     {
         $this->withHeader('Authorization', 'Bearer '.$this->token())->postJson('/auth/neon/session')->assertOk();
         $office = DB::table('members')->where('provider_id', 'neon-user-1')->value('office_id');
-        $link = $this->postJson('/api/v1/team/invite', ['email' => 'staff@example.test', 'name' => 'Funcionário convidado'])->assertOk()->json('url');
+        $category = $this->postJson('/api/v1/team/categories', ['name' => 'Assistente jurídico', 'responsibilities' => 'Conferir processos', 'permissions' => ['prazos.view']])->assertOk()->json('id');
+        $link = $this->postJson('/api/v1/team/invite', ['email' => 'staff@example.test', 'name' => 'Funcionário convidado', 'category_id' => $category, 'responsibilities' => 'Conferir custas'])->assertOk()->json('url');
         parse_str(parse_url($link, PHP_URL_QUERY), $query);
         $this->withHeader('Authorization', 'Bearer '.$this->token(['sub' => 'staff-user', 'email' => 'other@example.test']))->postJson('/auth/neon/session', ['invitation' => $query['convite']])->assertForbidden();
         $this->withHeader('Authorization', 'Bearer '.$this->token(['sub' => 'staff-user', 'email' => 'staff@example.test']))->postJson('/auth/neon/session', ['invitation' => $query['convite']])->assertOk();
         $this->assertSame($office, DB::table('members')->where('provider_id', 'staff-user')->value('office_id'));
         $this->assertSame(1, DB::table('offices')->count());
+        $this->assertDatabaseHas('members', ['provider_id' => 'staff-user', 'account_type' => 'associate', 'category_id' => $category, 'responsibilities' => 'Conferir custas']);
         $this->postJson('/api/v1/team/invite', ['email' => 'another@example.test', 'name' => 'Outra pessoa'])->assertForbidden();
     }
 }

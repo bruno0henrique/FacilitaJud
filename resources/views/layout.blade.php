@@ -6,7 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="neon-auth-url" content="{{ config('facilitajud.neon_url') }}">
     <title>@yield('title', 'FacilitaJud') · FacilitaJud</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('brand/facilitajud-icon.png') }}" type="image/png">
+    <link rel="preload" href="{{ asset('fonts/Satoshi-Variable.woff2') }}" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>

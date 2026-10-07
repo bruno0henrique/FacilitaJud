@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.2.2** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.0** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -64,3 +64,20 @@ A rotina de leitura/exportação usa Python com biblioteca padrão dentro do con
 ### Sessão Neon
 
 Cadastro, login, recuperação e renovação passam por endpoints do Laravel no mesmo domínio. Cookies do Neon ficam criptografados na sessão do servidor, e os JWTs são verificados por JWKS. Senhas e tokens não são devolvidos ao navegador. Cadastro sem sessão imediata apresenta a confirmação de criação e orienta a entrada, evitando repetir o cadastro.
+
+
+### Equipe e acessos (0.3.0)
+
+Cadastro sem convite cria um escritório e um administrador. Convites gerados na Equipe criam associados no escritório do convidante; o link vale por 7 dias e só pode ser aceito pelo e-mail convidado. O envio é feito compartilhando o link; não há envio automático de e-mail implementado.
+
+O ADM cria e edita categorias com responsabilidades e permissões. Cada associado pode herdar a categoria ou receber acessos personalizados. Ao remover a personalização, volta a herdar a categoria. Alterações são consultadas no banco a cada requisição, inclusive durante sessões existentes. Sem categoria/personalização, o acesso básico permite consultar e registrar andamentos das próprias obrigações; um conjunto vazio de permissões restringe o acesso ao Painel e ao próprio perfil. O tipo de conta administrativo é explícito e não depende do nome da categoria ou da função.
+
+Processos, tarefas e compromissos são atribuídos pelo ADM em Equipe → Atribuir registros. Clientes, documentos e conversas são limitados aos clientes/processos atribuídos; atividades gerais e prazos jurídicos do escritório ficam restritos ao ADM. Uma atribuição não libera o módulo automaticamente: a permissão de consulta também precisa estar habilitada. Criar registros gerais, configurar o escritório e importar/distribuir/exportar Excel são ações administrativas. Para tarefas, o associado pode editar/concluir quando autorizado; documentos podem ser adicionados apenas a processos atribuídos e autorizados. A vinculação automática entre processos e linhas de planilha/Judit permanece futura.
+
+### Identidade visual
+
+Os PNGs enviados foram preservados em `public/brand`, usando enquadramento proporcional na interface. A home mantém um bloco operacional principal e dois secundários com números do dia. Tokens globais de cores e tipografia ficam em `resources/css/app.css`.
+
+Satoshi é obtida da [Fontshare/Indian Type Foundry](https://www.fontshare.com/fonts/satoshi), conforme a [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl). O build baixa o WOFF2 oficial para `public/fonts` (ignorado pelo Git), e o Docker incorpora o arquivo. O navegador carrega a fonte do próprio servidor. A primeira instalação/build precisa de internet; depois de preparada, a fonte funciona localmente sem acessar a Fontshare. Os arquivos da fonte não são redistribuídos pelo repositório. Pesos: 400 para texto, 500/600 para hierarquia e 700 para números.
+
+No ambiente local, a demonstração é exibida apenas sem sessão autenticada. Após entrar, prevalecem o escritório e as permissões reais da conta.

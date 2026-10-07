@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-10-06
+
+- Nova identidade com as imagens originais da marca, Satoshi variável servida localmente e paleta pastel centralizada.
+- Cadastro comum cria um administrador; convites vinculam associados ao escritório com acessos definidos pelo ADM.
+- Categorias personalizadas, responsabilidades e permissões individuais editáveis na Equipe, com efeito na próxima requisição.
+- Associados visualizam apenas registros atribuídos e módulos autorizados, com restrições aplicadas às páginas, aos detalhes e às APIs.
+- ADM atribui processos, tarefas e compromissos; importação, redistribuição e exportação de planilhas continuam exclusivas do administrador.
+
 ## 0.2.2 — 2026-10-06
 
 - O próximo passo considera obrigações importadas e permite registrar o andamento diretamente pela home.
