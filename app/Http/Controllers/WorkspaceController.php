@@ -40,14 +40,14 @@ class WorkspaceController extends Controller
         $officeId = (int) $request->attributes->get('office_id');
         $access = app(WorkspacePermissions::class);
         abort_unless($access->module($request, $module), 403);
-        $data = $dashboard->data($officeId, $request);
+        $data = $dashboard->data($officeId, $request, $module);
         if (! $request->attributes->get('is_admin')) {
             $data['deadlines'] = collect();
             $data['dueTodayCount'] = 0;
             $data['overdueCount'] = 0;
         }
         $queue = app(WorkQueueController::class)->query($request);
-        $queueNext = (clone $queue)->where('status', '!=', 'Concluído')->orderBy('due_at')->orderBy('id')->first();
+        $queueNext = $module === 'painel' ? (clone $queue)->where('status', '!=', 'Concluído')->orderBy('due_at')->orderBy('id')->first() : null;
         $primaryWork = $queueNext && (! $data['nextTask'] || ! $request->attributes->get('is_admin') || Carbon::parse($queueNext->due_at)->lte($data['nextTask']->due_at)) ? $queueNext : null;
         $day = $request->query('day', now()->toDateString());
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
@@ -59,33 +59,34 @@ class WorkspaceController extends Controller
             $day = now()->toDateString();
         }
         $daily = (clone $queue)->whereBetween('due_at', [Carbon::parse($day)->startOfDay(), Carbon::parse($day)->endOfDay()]);
-        $workTotal = (clone $daily)->count();
-        $workCompleted = (clone $daily)->where('status', 'Concluído')->count();
-        $workItems = $daily->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+        $workCounts = $module === 'prazos' ? (clone $daily)->selectRaw("COUNT(*) as total, SUM(CASE WHEN status = 'Concluído' THEN 1 ELSE 0 END) as completed")->first() : null;
+        $workTotal = (int) ($workCounts->total ?? 0);
+        $workCompleted = (int) ($workCounts->completed ?? 0);
+        $workItems = $module === 'prazos' ? $daily->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('q'), fn ($q, $search) => $q->where(function ($q) use ($search): void {
                 $q->where('title', 'like', '%'.$search.'%')->orWhere('process_number', 'like', '%'.$search.'%');
             }))
-            ->orderBy('due_at')->orderBy('id')->paginate(50)->withQueryString();
-        $data['queueTodayCount'] = (clone $queue)->whereBetween('due_at', [now()->startOfDay(), now()->endOfDay()])->where('status', '!=', 'Concluído')->count();
-        $clients = $access->query($request, 'clients')->orderBy('name')->get();
+            ->orderBy('due_at')->orderBy('id')->paginate(50)->withQueryString() : null;
+        $data['queueTodayCount'] = $module === 'painel' ? (clone $queue)->whereBetween('due_at', [now()->startOfDay(), now()->endOfDay()])->where('status', '!=', 'Concluído')->count() : 0;
+        $clients = in_array($module, ['processos', 'clientes', 'mensagens'], true) ? $access->query($request, 'clients')->orderBy('name')->get() : collect();
         $caseQuery = $module === 'documentos' && $access->allows($request, 'documentos.upload') ? DB::table('legal_cases')->where('legal_cases.office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('assigned_member_id', $request->attributes->get('member_id'))) : $access->query($request, 'legal_cases');
-        $cases = $caseQuery->join('clients', 'clients.id', '=', 'legal_cases.client_id')
-            ->where('legal_cases.office_id', $officeId)->select('legal_cases.*', 'clients.name as client_name')->orderBy('legal_cases.id')->get();
+        $cases = in_array($module, ['painel', 'tarefas', 'processos', 'clientes', 'agenda', 'prazos', 'documentos'], true) ? $caseQuery->join('clients', 'clients.id', '=', 'legal_cases.client_id')
+            ->where('legal_cases.office_id', $officeId)->select('legal_cases.*', 'clients.name as client_name')->orderBy('legal_cases.id')->get() : collect();
 
         return view('workspace', $data + [
             'module' => $module, 'modules' => array_filter(self::MODULES, fn ($value, $key) => $access->module($request, $key), ARRAY_FILTER_USE_BOTH),
             'access' => $access, 'actor' => $request->attributes->get('actor'), 'permissionOptions' => WorkspacePermissions::OPTIONS,
-            'categories' => DB::table('team_categories')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->whereIn('id', DB::table('members')->where('id', $request->attributes->get('member_id'))->select('category_id')))->orderBy('name')->get(),
+            'categories' => in_array($module, ['equipe', 'configuracoes'], true) ? DB::table('team_categories')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->whereIn('id', DB::table('members')->where('id', $request->attributes->get('member_id'))->select('category_id')))->orderBy('name')->get() : collect(),
             'isAdmin' => $request->attributes->get('is_admin'), 'workItems' => $workItems, 'workTotal' => $workTotal,
             'primaryWork' => $primaryWork,
             'workCompleted' => $workCompleted, 'workDay' => $day,
-            'imports' => $request->attributes->get('is_admin') ? DB::table('spreadsheet_imports')->where('office_id', $officeId)->whereNotNull('mapping')->select('id', 'filename', 'created_at')->orderByDesc('id')->get() : collect(),
+            'imports' => $module === 'prazos' && $request->attributes->get('is_admin') ? DB::table('spreadsheet_imports')->where('office_id', $officeId)->whereNotNull('mapping')->select('id', 'filename', 'created_at')->orderByDesc('id')->get() : collect(),
             'office' => DB::table('offices')->find($officeId),
             'demo' => $request->attributes->get('demo'),
             'clients' => $clients, 'cases' => $cases,
-            'documents' => $access->query($request, 'documents')->select('id', 'name', 'legal_case_id', 'mime', 'size', 'created_at')->orderByDesc('created_at')->get(),
-            'members' => DB::table('members')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('id', $request->attributes->get('member_id')))->orderBy('name')->get(),
-            'messages' => $access->query($request, 'messages')->orderBy('created_at')->get(),
+            'documents' => $module === 'documentos' ? $access->query($request, 'documents')->select('id', 'name', 'legal_case_id', 'mime', 'size', 'created_at')->orderByDesc('created_at')->get() : collect(),
+            'members' => in_array($module, ['equipe', 'prazos', 'configuracoes'], true) ? DB::table('members')->where('office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('id', $request->attributes->get('member_id')))->orderBy('name')->get() : collect(),
+            'messages' => $module === 'mensagens' ? $access->query($request, 'messages')->orderBy('created_at')->get() : collect(),
         ]);
     }
 

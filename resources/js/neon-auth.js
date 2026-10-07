@@ -45,8 +45,17 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
             toast('Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.');
         } catch (error) { toast(error.message, true); }
     });
-    if (currentModule) {
-        const refresh = () => api('/auth/neon/refresh', { method: 'POST', data: {} }).catch(error => toast(error.message, true));
+    if (currentModule && document.querySelector('meta[name="neon-session-active"]')?.content === '1') {
+        let lastRefresh = Date.now();
+        let refreshing = false;
+        const refresh = async () => {
+            if (document.hidden || refreshing || Date.now() - lastRefresh < 5 * 60 * 1000) return;
+            refreshing = true;
+            lastRefresh = Date.now();
+            try { await api('/auth/neon/refresh', { method: 'POST', data: {} }); }
+            catch (error) { toast(error.message, true); }
+            finally { refreshing = false; }
+        };
         setInterval(refresh, 10 * 60 * 1000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
     }

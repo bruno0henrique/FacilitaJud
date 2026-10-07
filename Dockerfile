@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev libon
     && docker-php-ext-install pdo_pgsql mbstring zip intl sodium bcmath curl \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
+RUN a2enmod deflate
 WORKDIR /app
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
@@ -26,6 +27,7 @@ FROM base AS runtime
 COPY --from=backend /app /app
 COPY --from=frontend /app/public/build /app/public/build
 COPY --from=frontend /app/public/fonts /app/public/fonts
+COPY docker/php-performance.ini /usr/local/etc/php/conf.d/facilitajud-performance.ini
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/facilitajud-entrypoint
 RUN chmod +x /usr/local/bin/facilitajud-entrypoint \

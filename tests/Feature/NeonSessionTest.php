@@ -12,6 +12,13 @@ class NeonSessionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_refresh_without_a_neon_session_does_not_call_the_provider(): void
+    {
+        Http::fake();
+        $this->postJson('/auth/neon/refresh')->assertUnauthorized();
+        Http::assertNothingSent();
+    }
+
     public function test_signup_keeps_upstream_cookie_server_side_and_login_reuses_the_office(): void
     {
         config(['facilitajud.demo' => false, 'facilitajud.neon_url' => 'https://auth.example.test/auth', 'facilitajud.neon_jwks' => null]);

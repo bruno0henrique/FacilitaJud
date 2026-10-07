@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.1** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.2** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -22,9 +22,13 @@ Os volumes `postgres_data` e `app_storage` persistem os dados. Não use `docker 
 
 Requer PHP 8.5 com PDO PostgreSQL, mbstring, fileinfo, openssl, curl, intl, zip e sodium; Composer 2; Node 24. Execute `composer install`, `npm ci`, `npm run build`, `docker compose up -d db`, `php artisan key:generate`, `php artisan migrate --seed` e `php artisan serve`. O PostgreSQL local fica na porta 55432.
 
+No PHP nativo do Windows, configure `curl.cainfo` e `openssl.cafile` no `php.ini` para um bundle de certificados atualizado (https://curl.se/ca/cacert.pem) e reinicie o servidor. Sem isso, o Neon pode falhar com cURL 60. Não desative a verificação HTTPS. O Docker já instala os certificados do sistema.
+
 ## Online: Vercel + Neon
 
 Projeto Vercel: **facilitajud**, preset **Container**, raiz `./`, Dockerfile `Dockerfile.vercel`. Repositório: https://github.com/bruno0henrique/FacilitaJud. A imagem inclui Apache/PHP e os assets compilados, atende a variável `PORT` e não depende de Node em produção.
+
+A região da aplicação é São Paulo (`gru1`), próxima ao Neon. O container ajusta o OPcache e prepara os caches de configuração, rotas e views na inicialização em produção. Assets com hash recebem cache longo; páginas e dados de usuários não recebem cache público. Os módulos carregam somente os dados usados na tela, mantendo as permissões consultadas a cada requisição. A renovação Neon ocorre somente com sessão real e evita chamadas repetidas ao alternar abas.
 
 Use `.env.production.example` como lista das configurações, sem publicar esse arquivo com valores reais. Defina `APP_KEY` persistente, `APP_ENV=production`, `APP_DEBUG=false`, `DEMO_MODE=false`, `APP_URL` HTTPS, sessão criptografada e cookie seguro. Integre o projeto Neon na Vercel:
 

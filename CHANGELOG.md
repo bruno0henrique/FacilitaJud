@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 — 2026-10-07
+
+- Reduz consultas por módulo; Equipe deixa de carregar processos, documentos, mensagens e filas não utilizadas.
+- Impede renovação Neon na demonstração e sem sessão; agrupa chamadas ao alternar abas.
+- Aproxima aplicação e banco em São Paulo, ajusta OPcache e caches Laravel em produção.
+- Documenta a configuração de certificados HTTPS no PHP nativo do Windows.
+- Comprime respostas textuais e mantém assets estáticos em cache, sem cache público de informações do escritório.
+
 ## 0.3.1 — 2026-10-06
 
 - Padroniza a grafia visível da marca como FacilitaJud na sidebar e no login.

@@ -84,6 +84,9 @@ class AuthController extends Controller
         abort_unless(config('facilitajud.auth_provider') === 'neon', 503);
         $endpoints = ['login' => 'sign-in/email', 'register' => 'sign-up/email', 'recover' => 'request-password-reset', 'reset' => 'reset-password'];
         abort_unless(isset($endpoints[$action]) || $action === 'refresh', 404);
+        if ($action === 'refresh' && (! $request->session()->has('identity') || ! $request->session()->has('neon_cookies'))) {
+            return response()->json(['message' => 'Sua sessão expirou. Entre novamente.'], 401);
+        }
         if ($action !== 'refresh') {
             $rules = match ($action) {
                 'reset' => ['token' => 'required|string|max:1000', 'newPassword' => 'required|string|min:8|max:128'],
