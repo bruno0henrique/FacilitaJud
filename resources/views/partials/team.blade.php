@@ -1,7 +1,7 @@
 <div class="team-page"><div class="toolbar"><h2>Equipe do escritório <span class="metadata">{{ $isAdmin ? 'Administre acessos e responsabilidades' : 'Seu perfil de associado' }}</span></h2></div>
 <section class="surface team-list">
 @foreach($members as $member)
-<details class="team-member"><summary><span class="avatar neutral">{{ mb_strtoupper(mb_substr($member->name,0,1)) }}</span><span class="grow"><strong>{{ $member->name }}</strong><small>{{ $member->email ?: 'Perfil demonstrativo' }}</small></span><span class="badge {{ $member->account_type === 'admin' ? 'green' : 'lavender' }}">{{ $member->account_type === 'admin' ? 'Administrador' : ($categories->firstWhere('id', $member->category_id)?->name ?? 'Associado') }}</span><x-icon name="chevron-down"/></summary>
+<details class="team-member"><summary><span class="avatar neutral">{{ mb_strtoupper(mb_substr($member->name,0,1)) }}</span><span class="grow"><strong>{{ $member->name }}</strong><small>{{ $member->email ?: 'Equipe do escritório' }}</small></span><span class="badge {{ $member->account_type === 'admin' ? 'green' : 'lavender' }}">{{ $member->account_type === 'admin' ? 'Administrador' : ($categories->firstWhere('id', $member->category_id)?->name ?? 'Associado') }}</span><x-icon name="chevron-down"/></summary>
 @if($isAdmin && $member->account_type !== 'admin')
 <form class="team-form" data-team-endpoint="/api/v1/team/members/{{ $member->id }}" data-team-method="PATCH">
 <label>Categoria<select name="category_id"><option value="">Associado · acesso básico a obrigações</option>@foreach($categories as $category)<option value="{{ $category->id }}" @selected($member->category_id === $category->id)>{{ $category->name }}</option>@endforeach</select></label>

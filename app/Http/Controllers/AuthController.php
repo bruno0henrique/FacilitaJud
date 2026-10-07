@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\NeonAuth;
 use App\Services\NeonSession;
+use App\Services\PresentationData;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,17 @@ class AuthController extends Controller
         });
         $request->session()->regenerate();
         $request->session()->put('identity', ['id' => $claims->sub, 'expires_at' => $claims->exp]);
+        $presentationEmail = config('facilitajud.presentation_email');
+        if ($presentationEmail && strcasecmp($presentationEmail, $claims->email ?? '') === 0) {
+            $member = DB::table('members')->where('provider_id', $claims->sub)->where('account_type', 'admin')->first();
+            if ($member) {
+                try {
+                    app(PresentationData::class)->populate((int) $member->office_id);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
 
         return response()->json(['redirect' => route('workspace', ['module' => 'painel'])]);
     }

@@ -30,7 +30,7 @@ class WorkspaceController extends Controller
         'clientes' => ['Clientes', 'Informações próximas de quem importa.', 'users-round'],
         'documentos' => ['Documentos', 'Cada arquivo no lugar certo.', 'files'],
         'equipe' => ['Equipe', 'Responsabilidades claras. Rotina compartilhada.', 'contact-round'],
-        'mensagens' => ['Mensagens', 'Conversas demonstrativas do seu escritório.', 'mail'],
+        'mensagens' => ['Mensagens', 'Conversas do seu escritório.', 'mail'],
         'configuracoes' => ['Configurações', 'Os detalhes do seu espaço de trabalho.', 'settings-2'],
     ];
 

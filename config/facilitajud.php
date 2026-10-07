@@ -1,7 +1,8 @@
 <?php
 
 return [
-    'version' => '0.3.3',
+    'version' => '0.3.4',
+    'presentation_email' => env('PRESENTATION_EMAIL'),
     'demo' => (bool) env('DEMO_MODE', false),
     'demo_docker_loopback' => (bool) env('DEMO_DOCKER_LOOPBACK', false),
     'auth_provider' => env('AUTH_PROVIDER', 'neon'),

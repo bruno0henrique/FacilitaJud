@@ -63,3 +63,5 @@ h1,h2,h3,strong,.button { font-weight:600; }
 .brand .brand-symbol img { position:absolute; max-width:none; width:745%; height:auto; left:-123%; top:-135%; }
 .brand-wordmark { font-size:38px; line-height:1.1; font-weight:700; letter-spacing:-1px; white-space:nowrap; }
 @media(max-width:650px) { .team-page .team-management-grid { gap:20px; } .team-page > .settings-surface { margin-top:20px; } .section-title-row { align-items:flex-start; flex-direction:column; gap:8px; } .brand-wordmark {font-size:clamp(26px,8vw,32px);} .brand-symbol {width:48px;height:56px;} .brand-login {gap:8px;} }
+
+.auth-status{margin-top:12px;color:var(--muted);font-size:12px;line-height:1.6;text-align:center}.button.is-loading{opacity:1;cursor:wait}.button.is-loading:before{content:"";width:15px;height:15px;border:2px solid #ffffff55;border-top-color:#fff;border-radius:50%;animation:auth-spin .7s linear infinite;flex-shrink:0}@keyframes auth-spin{to{transform:rotate(360deg)}}

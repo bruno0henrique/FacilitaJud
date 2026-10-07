@@ -2,6 +2,7 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
     const form = document.querySelector('#login-form');
     const token = new URLSearchParams(location.search).get('token');
     let signup = false;
+    let submitting = false;
     const toggle = document.querySelector('#toggle-signup');
     function mode() {
         document.querySelector('#signup-name').hidden = !signup;
@@ -20,9 +21,23 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
     }
     form?.addEventListener('submit', async event => {
         event.preventDefault();
+        if (submitting) return;
         const button = form.querySelector('[type="submit"]');
         const error = form.querySelector('.form-error');
+        const originalLabel = button.innerHTML;
+        const status = document.querySelector('#auth-status');
+        let redirecting = false;
+        let modeChanged = false;
+        submitting = true;
         button.disabled = true; error.hidden = true;
+        button.setAttribute('aria-busy', 'true');
+        form.setAttribute('aria-busy', 'true');
+        button.classList.add('is-loading');
+        button.textContent = token ? 'Salvando senha…' : signup ? 'Criando sua conta…' : 'Entrando…';
+        toggle.disabled = true;
+        document.querySelector('#recover-account').disabled = true;
+        status.hidden = false;
+        status.textContent = token ? 'Aguarde enquanto salvamos sua senha.' : signup ? 'Preparando seu acesso ao escritório.' : 'Validando seu acesso ao escritório.';
         try {
             const action = token ? 'reset' : signup ? 'register' : 'login';
             const data = token ? { token, newPassword: form.elements.password.value } : {
@@ -31,11 +46,26 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
             };
             const result = await api(`/auth/neon/${action}`, { method: 'POST', data });
             form.elements.password.value = '';
-            if (result.redirect) { location.href = result.redirect; return; }
-            if (token) { location.href = '/entrar'; return; }
-            signup = false; mode(); toast(result.message);
+            if (result.redirect || token) {
+                redirecting = true;
+                button.textContent = 'Abrindo seu escritório…';
+                status.textContent = token ? 'Senha salva. Abrindo a tela de acesso.' : 'Acesso confirmado. Abrindo seu escritório.';
+                location.href = result.redirect || '/entrar'; return;
+            }
+            signup = false; mode(); modeChanged = true; toast(result.message);
         } catch (exception) { error.textContent = exception.message; error.hidden = false; }
-        finally { button.disabled = false; }
+        finally {
+            if (!redirecting) {
+                submitting = false;
+                button.disabled = false;
+                button.innerHTML = modeChanged ? 'Entrar no escritório' : originalLabel;
+                button.removeAttribute('aria-busy'); form.removeAttribute('aria-busy');
+                button.classList.remove('is-loading');
+                toggle.disabled = false;
+                document.querySelector('#recover-account').disabled = false;
+                status.hidden = true;
+            }
+        }
     });
     document.querySelector('#recover-account')?.addEventListener('click', async () => {
         const email = form.elements.email;

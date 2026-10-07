@@ -56,6 +56,19 @@ class NeonAuthTest extends TestCase
         $this->assertSame(0, DB::table('offices')->count());
     }
 
+    public function test_only_the_configured_admin_receives_presentation_records(): void
+    {
+        config(['facilitajud.presentation_email' => 'advogado@example.test']);
+        $this->withHeader('Authorization', 'Bearer '.$this->token())->postJson('/auth/neon/session')->assertOk();
+        $office = DB::table('members')->where('provider_id', 'neon-user-1')->value('office_id');
+        $this->assertSame(120, DB::table('work_items')->where('office_id', $office)->count());
+        $this->withHeader('Authorization', 'Bearer '.$this->token())->postJson('/auth/neon/session')->assertOk();
+        $this->assertSame(120, DB::table('work_items')->where('office_id', $office)->count());
+        $this->withHeader('Authorization', 'Bearer '.$this->token(['sub' => 'another-admin', 'email' => 'other@example.test']))->postJson('/auth/neon/session')->assertOk();
+        $other = DB::table('members')->where('provider_id', 'another-admin')->value('office_id');
+        $this->assertSame(0, DB::table('work_items')->where('office_id', $other)->count());
+    }
+
     public function test_invited_employee_joins_the_admin_office_without_receiving_admin_permissions(): void
     {
         $this->withHeader('Authorization', 'Bearer '.$this->token())->postJson('/auth/neon/session')->assertOk();

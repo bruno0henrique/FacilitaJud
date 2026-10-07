@@ -22,7 +22,7 @@ async function api(url, { method = 'GET', data, signal, headers = {} } = {}) {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-        if (response.status === 401) setTimeout(() => { location.href = '/entrar'; }, 1500);
+        if (response.status === 401 && currentModule) setTimeout(() => { location.href = '/entrar'; }, 1500);
         const validation = result.errors ? Object.values(result.errors).flat().join(' ') : null;
         throw new Error(validation || result.message || 'Não foi possível salvar. Tente novamente.');
     }

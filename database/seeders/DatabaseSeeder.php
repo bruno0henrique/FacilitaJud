@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
             }
             $clients = [];
             foreach (['Mariana Torres', 'Rafael Antunes', 'Ana Costa', 'Carlos Oliveira'] as $name) {
-                $clients[] = Client::create(['office_id' => $office, 'name' => $name, 'notes' => 'Cadastro fictício para apresentação do sistema.']);
+                $clients[] = Client::create(['office_id' => $office, 'name' => $name, 'notes' => 'Documentação centralizada no escritório.']);
             }
             $cases = [];
             foreach ([['Ação de indenização', '0012345-67.2026.8.26.0100', '3ª Vara Cível · São Paulo', 'Em andamento'],
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
                 ['Ação de cobrança', '0023410-89.2026.8.26.0100', '3ª Vara Cível · São Paulo', 'Aguardando audiência'],
                 ['Inventário extrajudicial', null, 'Tabelionato de Notas · São Paulo', 'Concluído']] as $index => [$title, $number, $court, $status]) {
                 $cases[] = LegalCase::create(['office_id' => $office, 'client_id' => $clients[$index]->id, 'title' => $title, 'number' => $number,
-                    'court' => $court, 'status' => $status, 'responsible' => 'Helena Souza', 'notes' => 'Dados fictícios. Nenhuma consulta ao tribunal foi realizada.']);
+                    'court' => $court, 'status' => $status, 'responsible' => 'Helena Souza', 'notes' => 'Acompanhamento interno do processo. Conferir documentos e próximos passos.']);
             }
             $today = now()->startOfDay();
             foreach ([['Protocolar contestação — Autos 0012345-67', 'Mariana Torres · 3ª Vara Cível', 0, 17, 'Alta', 0],

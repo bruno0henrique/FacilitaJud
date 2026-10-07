@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 — 2026-10-07
+
+- Login, cadastro e alteração de senha apresentam progresso; login mantém o estado até a navegação e bloqueia envios repetidos.
+- Falhas de autenticação permanecem visíveis no formulário, sem recarregar a tela e apagar o retorno.
+- Carga de apresentação vinculada ao escritório autorizado, com 24 processos, 48 tarefas, 120 obrigações, documentos, agenda e histórico coerentes.
+- Carga idempotente preserva cadastros e andamentos existentes; não preenche outras contas automaticamente.
+- Remove rótulos decorativos de dados fictícios do rodapé e da sidebar.
+
 ## 0.3.3 — 2026-10-07
 
 - Renova a sessão considerando o vencimento do token, inclusive depois de navegar entre módulos, sem duplicar chamadas em andamento.
