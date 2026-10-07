@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.0** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.1** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -72,7 +72,7 @@ Cadastro sem convite cria um escritório e um administrador. Convites gerados na
 
 O ADM cria e edita categorias com responsabilidades e permissões. Cada associado pode herdar a categoria ou receber acessos personalizados. Ao remover a personalização, volta a herdar a categoria. Alterações são consultadas no banco a cada requisição, inclusive durante sessões existentes. Sem categoria/personalização, o acesso básico permite consultar e registrar andamentos das próprias obrigações; um conjunto vazio de permissões restringe o acesso ao Painel e ao próprio perfil. O tipo de conta administrativo é explícito e não depende do nome da categoria ou da função.
 
-Processos, tarefas e compromissos são atribuídos pelo ADM em Equipe → Atribuir registros. Clientes, documentos e conversas são limitados aos clientes/processos atribuídos; atividades gerais e prazos jurídicos do escritório ficam restritos ao ADM. Uma atribuição não libera o módulo automaticamente: a permissão de consulta também precisa estar habilitada. Criar registros gerais, configurar o escritório e importar/distribuir/exportar Excel são ações administrativas. Para tarefas, o associado pode editar/concluir quando autorizado; documentos podem ser adicionados apenas a processos atribuídos e autorizados. A vinculação automática entre processos e linhas de planilha/Judit permanece futura.
+Tarefas e compromissos são atribuídos pelo ADM em Equipe → Atribuir tarefas e compromissos. Processos serão atribuídos por planilha: o mockup enviado serve como referência provisória, e o modelo final ainda está em definição. A opção manual de processos foi retirada; a importação desse modelo não está habilitada. Clientes, documentos e conversas são limitados aos clientes/processos atribuídos; atividades gerais e prazos jurídicos do escritório ficam restritos ao ADM. Uma atribuição não libera o módulo automaticamente: a permissão de consulta também precisa estar habilitada. Criar registros gerais, configurar o escritório e importar/distribuir/exportar Excel são ações administrativas. Para tarefas, o associado pode editar/concluir quando autorizado; documentos podem ser adicionados apenas a processos atribuídos e autorizados. A vinculação automática entre processos e linhas de planilha/Judit permanece futura.
 
 ### Identidade visual
 
@@ -81,3 +81,5 @@ Os PNGs enviados foram preservados em `public/brand`, usando enquadramento propo
 Satoshi é obtida da [Fontshare/Indian Type Foundry](https://www.fontshare.com/fonts/satoshi), conforme a [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl). O build baixa o WOFF2 oficial para `public/fonts` (ignorado pelo Git), e o Docker incorpora o arquivo. O navegador carrega a fonte do próprio servidor. A primeira instalação/build precisa de internet; depois de preparada, a fonte funciona localmente sem acessar a Fontshare. Os arquivos da fonte não são redistribuídos pelo repositório. Pesos: 400 para texto, 500/600 para hierarquia e 700 para números.
 
 No ambiente local, a demonstração é exibida apenas sem sessão autenticada. Após entrar, prevalecem o escritório e as permissões reais da conta.
+
+A grafia exibida é **FacilitaJud**, inclusive no login e na sidebar. O símbolo dos arquivos originais foi preservado; o nome é apresentado em texto com a capitalização aprovada.

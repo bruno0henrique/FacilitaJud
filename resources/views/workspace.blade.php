@@ -3,7 +3,7 @@
 @section('body')
 <div class="app-shell">
     <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
-        <a class="brand" href="{{ route('home') }}"><span class="brand-icon"><img src="{{ asset('brand/facilitajud-icon.png') }}" alt="" width="1254" height="1254"></span><span><strong>facilitajud</strong><small>Sua rotina, em equilíbrio.</small></span></a>
+        <a class="brand" href="{{ route('home') }}"><span class="brand-icon"><img src="{{ asset('brand/facilitajud-icon.png') }}" alt="" width="1254" height="1254"></span><span><strong>Facilita<span class="brand-jud">Jud</span></strong><small>Sua rotina, em equilíbrio.</small></span></a>
         <div class="sidebar-divider"></div><span class="nav-label">ÁREA DE TRABALHO</span>
         <nav aria-label="Módulos">
             @foreach($modules as $key => [$label, $subtitle, $icon])

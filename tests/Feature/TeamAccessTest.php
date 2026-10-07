@@ -86,9 +86,11 @@ class TeamAccessTest extends TestCase
         $category = DB::table('team_categories')->insertGetId(['office_id' => $foreign, 'name' => 'Outro', 'permissions' => '[]', 'created_at' => now(), 'updated_at' => now()]);
         $this->patchJson('/api/v1/team/members/'.$this->member, ['category_id' => $category])->assertUnprocessable();
         $this->patchJson('/api/v1/team/categories/'.$category, ['name' => 'Outra', 'permissions' => []])->assertNotFound();
-        $id = DB::table('legal_cases')->where('office_id', $this->office)->value('id');
-        $this->patchJson('/api/v1/team/assign/case/'.$id, ['assigned_member_id' => $this->member])->assertOk();
-        $this->assertDatabaseHas('legal_cases', ['id' => $id, 'assigned_member_id' => $this->member, 'responsible' => 'Associado de teste']);
+        $id = DB::table('tasks')->where('office_id', $this->office)->value('id');
+        $this->patchJson('/api/v1/team/assign/task/'.$id, ['assigned_member_id' => $this->member])->assertOk();
+        $this->assertDatabaseHas('tasks', ['id' => $id, 'assigned_member_id' => $this->member]);
+        $caseId = DB::table('legal_cases')->where('office_id', $this->office)->value('id');
+        $this->patchJson('/api/v1/team/assign/case/'.$caseId, ['assigned_member_id' => $this->member])->assertUnprocessable();
     }
 
     public function test_documents_and_hidden_templates_do_not_leak_other_associates_data(): void

@@ -28,8 +28,6 @@ h1,h2,h3,strong,.button { font-weight:600; }
 .metric,.deadline-overview>strong,.date-tile strong { font-weight:700; }
 .brand-icon { display:block; position:relative; width:38px; height:38px; flex-shrink:0; overflow:hidden; border-radius:10px; }
 .brand .brand-icon img { position:absolute; width:156%; max-width:none; height:auto; left:-28%; top:-27%; }
-.brand-horizontal { position:relative; display:block; width:min(280px,100%); aspect-ratio:4.35; overflow:hidden; margin-bottom:28px; }
-.brand.brand-horizontal img { position:absolute; width:149%; max-width:none; height:auto; left:-24.3%; top:-135%; }
 .team-list { padding:8px 24px; }
 .team-member + .team-member { border-top:1px solid var(--line); }
 .team-member summary { display:flex; align-items:center; gap:14px; padding:20px 0; cursor:pointer; list-style:none; }
@@ -50,3 +48,18 @@ h1,h2,h3,strong,.button { font-weight:600; }
 #invite-url { margin-top:12px; }
 @media(max-width:900px) { .team-management-grid { grid-template-columns:1fr; } }
 @media(max-width:650px) { .team-list {padding:8px 16px;} .team-member summary {gap:10px; flex-wrap:wrap;} .team-member summary .badge {margin-left:48px;} .team-responsibilities {padding-left:0;} }
+
+.team-page .team-management-grid { margin-top:24px; gap:24px; }
+.team-page > .settings-surface { margin-top:24px; }
+.team-page .settings-surface { max-width:none; }
+.team-page .settings-surface h2 { margin-bottom:12px; }
+.team-page .settings-surface > .page-note { margin-bottom:20px; }
+.team-page .process-assignment-note .page-note { margin-bottom:10px; }
+.section-title-row { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+.team-page .section-title-row h2 { margin-bottom:0; }
+.brand-jud { color:#8e82e8; }
+.brand-login { padding:0; gap:10px; margin-bottom:28px; }
+.brand-symbol { position:relative; display:block; flex-shrink:0; width:56px; height:64px; overflow:hidden; }
+.brand .brand-symbol img { position:absolute; max-width:none; width:745%; height:auto; left:-123%; top:-135%; }
+.brand-wordmark { font-size:38px; line-height:1.1; font-weight:700; letter-spacing:-1px; white-space:nowrap; }
+@media(max-width:650px) { .team-page .team-management-grid { gap:20px; } .team-page > .settings-surface { margin-top:20px; } .section-title-row { align-items:flex-start; flex-direction:column; gap:8px; } .brand-wordmark {font-size:clamp(26px,8vw,32px);} .brand-symbol {width:48px;height:56px;} .brand-login {gap:8px;} }

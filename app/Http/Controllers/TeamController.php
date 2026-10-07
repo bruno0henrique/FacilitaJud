@@ -70,15 +70,12 @@ class TeamController extends Controller
     {
         $this->admin($request);
         $table = match ($kind) {
-            'case' => 'legal_cases','task' => 'tasks','appointment' => 'appointments',default => abort(404)
+            'case' => abort(422, 'A atribuição de processos será feita por planilha. O modelo está em definição.'),'task' => 'tasks','appointment' => 'appointments',default => abort(404)
         };
         $data = $request->validate(['assigned_member_id' => ['nullable', 'integer', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))]]);
         $q = DB::table($table)->where('office_id', $request->attributes->get('office_id'))->where('id', $id);
         abort_unless((clone $q)->exists(), 404);
         $values = ['assigned_member_id' => $data['assigned_member_id'] ?? null, 'updated_at' => now()];
-        if ($kind === 'case') {
-            $values['responsible'] = isset($data['assigned_member_id']) ? DB::table('members')->where('id', $data['assigned_member_id'])->value('name') : 'Não atribuído';
-        }
         $q->update($values);
 
         return response()->json(['message' => 'Responsável atualizado.']);

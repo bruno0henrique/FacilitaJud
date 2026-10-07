@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-10-06
+
+- Padroniza a grafia visível da marca como FacilitaJud na sidebar e no login.
+- Define a atribuição de processos por planilha, com o mockup como referência provisória até o modelo final ficar pronto; remove a opção manual.
+- Mantém a atribuição de tarefas e compromissos e corrige o espaçamento entre os blocos de Equipe em desktop e mobile.
+
 ## 0.3.0 — 2026-10-06
 
 - Nova identidade com as imagens originais da marca, Satoshi variável servida localmente e paleta pastel centralizada.
