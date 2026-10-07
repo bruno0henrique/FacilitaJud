@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WorkQueueController;
 use App\Http\Controllers\WorkspaceController;
@@ -14,6 +15,12 @@ Route::post('/auth/neon/{action}', [AuthController::class, 'action'])->whereIn('
 Route::post('/sair', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(WorkspaceAccess::class)->group(function (): void {
+    Route::post('/api/v1/meetings/consent', [MeetingController::class, 'consent']);
+    Route::post('/api/v1/meetings/{id}/recordings', [MeetingController::class, 'start']);
+    Route::post('/api/v1/meeting-recordings/{id}/chunks', [MeetingController::class, 'chunk']);
+    Route::post('/api/v1/meeting-recordings/{id}/finish', [MeetingController::class, 'finish']);
+    Route::patch('/api/v1/meeting-recordings/{id}/notes', [MeetingController::class, 'notes']);
+    Route::get('/reunioes/audio/{id}', [MeetingController::class, 'audio'])->name('meetings.audio');
     Route::post('/api/v1/messages', [WorkspaceController::class, 'message']);
     Route::get('/api/v1/activities', [WorkspaceController::class, 'activities']);
     Route::patch('/api/v1/records/{kind}/{id}', [WorkspaceController::class, 'update']);

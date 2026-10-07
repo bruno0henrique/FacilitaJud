@@ -412,3 +412,5 @@ trialForm?.addEventListener('submit', async event => {
 });
 
 if (currentModule) import('./workspace-interactions.js').then(({ setupWorkspaceInteractions }) => setupWorkspaceInteractions({ api, toast, openEditor, dateTime })).catch(() => toast('Recarregue para carregar as interações.', true));
+
+if (currentModule === 'reunioes') import('./meeting-recorder.js').then(({ setupMeetingRecorder }) => setupMeetingRecorder({ api, toast })).catch(() => toast('Recarregue para carregar as reuniões.', true));

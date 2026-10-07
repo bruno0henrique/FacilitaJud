@@ -26,6 +26,7 @@ class WorkspaceController extends Controller
         'tarefas' => ['Tarefas', 'Cada tarefa no seu tempo.', 'list-checks'],
         'processos' => ['Processos', 'Seus processos, sempre em perspectiva.', 'scale'],
         'agenda' => ['Agenda', 'Um lugar para cada compromisso.', 'calendar-days'],
+        'reunioes' => ['Reuniões', 'Conversas registradas. Próximos passos claros.', 'users-round'],
         'prazos' => ['Prazos', 'Antecipe o que precisa de atenção.', 'clock-3'],
         'clientes' => ['Clientes', 'Informações próximas de quem importa.', 'users-round'],
         'documentos' => ['Documentos', 'Cada arquivo no lugar certo.', 'files'],
@@ -75,7 +76,7 @@ class WorkspaceController extends Controller
         $clients = $module === 'clientes' ? $clientQuery->when($request->query('q'), fn ($q, $search) => $q->where('name', 'like', '%'.$search.'%'))->orderBy('name')->paginate(15)->withQueryString()
             : (in_array($module, ['processos', 'mensagens'], true) ? $clientQuery->orderBy('name')->get() : collect());
         $caseQuery = $module === 'documentos' && $access->allows($request, 'documentos.upload') ? DB::table('legal_cases')->where('legal_cases.office_id', $officeId)->when(! $request->attributes->get('is_admin'), fn ($q) => $q->where('assigned_member_id', $request->attributes->get('member_id'))) : $access->query($request, 'legal_cases');
-        $caseList = in_array($module, ['painel', 'tarefas', 'processos', 'clientes', 'agenda', 'prazos', 'documentos'], true) ? $caseQuery->join('clients', 'clients.id', '=', 'legal_cases.client_id')
+        $caseList = in_array($module, ['painel', 'tarefas', 'processos', 'clientes', 'agenda', 'reunioes', 'prazos', 'documentos'], true) ? $caseQuery->join('clients', 'clients.id', '=', 'legal_cases.client_id')
             ->where('legal_cases.office_id', $officeId)->select('legal_cases.*', 'clients.name as client_name')->orderBy('legal_cases.id') : null;
         $cases = $caseList ? ($module === 'processos' ? $caseList->when($request->query('q'), fn ($q, $search) => $q->where(fn ($q) => $q->where('legal_cases.title', 'like', '%'.$search.'%')->orWhere('legal_cases.number', 'like', '%'.$search.'%')->orWhere('clients.name', 'like', '%'.$search.'%')))->paginate(25)->withQueryString() : $caseList->get()) : collect();
         $calendarMonth = now()->startOfMonth();
@@ -83,6 +84,14 @@ class WorkspaceController extends Controller
             $request->validate(['month' => 'nullable|date_format:Y-m']);
             $calendarMonth = $request->filled('month') ? Carbon::createFromFormat('Y-m', $request->query('month'))->startOfMonth() : now()->startOfMonth();
             $data['appointments'] = $access->query($request, 'appointments')->whereBetween('starts_at', [$calendarMonth->copy()->startOfWeek(Carbon::MONDAY), $calendarMonth->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY)->endOfDay()])->orderBy('starts_at')->get();
+        }
+
+        if ($module === 'reunioes') {
+            $meeting = app(MeetingController::class);
+            $data['meetings'] = $meeting->appointments($request)->orderByRaw('CASE WHEN starts_at >= ? THEN 0 ELSE 1 END', [now()->startOfDay()])->orderByRaw('CASE WHEN starts_at >= ? THEN starts_at END ASC', [now()->startOfDay()])->orderByDesc('starts_at')->paginate(15)->withQueryString();
+            $data['meetingRecordings'] = DB::table('meeting_recordings')->where('office_id', $officeId)->whereIn('appointment_id', $data['meetings']->pluck('id'))->orderByDesc('id')->get()->groupBy('appointment_id');
+            $data['meetingConsented'] = $meeting->consented($request);
+            $data['meetingConsentVersion'] = MeetingController::CONSENT_VERSION;
         }
 
         return view('workspace', $data + [

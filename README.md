@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.8** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.9** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -103,3 +103,15 @@ Mensagens permite buscar clientes, escolher conversas e registrar textos no pró
 Equipe permite editar nome, função, categoria, responsabilidades e acessos, remover e restaurar associados. A remoção revoga sessões existentes sem apagar registros ou histórico. O convidado aparece na equipe antes de aceitar; a aceitação vincula a conta ao mesmo cadastro.
 
 Agenda alterna lista e calendário mensal, com navegação, detalhes e criação por dia. Google Calendar, Apple e Outlook são opções visuais em desenvolvimento. Neo apresenta chat por texto e voz como protótipo visual: não chama IA, não ativa o microfone e não executa alterações.
+
+### Reuniões e gravação (0.3.9)
+
+Eventos de agenda do tipo **Reunião** aparecem no módulo Reuniões. O ADM vê o escritório; associados precisam de `reunioes.view` e só acessam eventos atribuídos. `reunioes.record` autoriza gravar e editar anotações/ata. A ciência dos termos é registrada por membro e versão; a confirmação de que os participantes foram informados e concordam é exigida em cada início. Esse registro não substitui a comunicação aos participantes.
+
+A captura utiliza [MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder), microfone mono e taxa solicitada de 24 kbps (Opus/WebM, Opus/Ogg ou AAC/MP4 conforme suporte). A taxa efetiva depende do navegador. Só há áudio: não gravamos câmera, tela ou áudio de chamadas automaticamente. HTTPS é necessário online; localhost também é permitido. Em videoconferências com fones, a voz remota pode não chegar ao microfone.
+
+Trechos são produzidos a cada 15 segundos, divididos em até 256 KB e enviados na ordem, com checksum e repetição idempotente. O banco armazena os bytes em base64, como o armazenamento de documentos atual (aproximadamente 33% de acréscimo); quatro horas a 24 kbps representam cerca de 43 MB de áudio antes desse acréscimo. Não há corte por duração de reunião; o teto de segurança é 256 MB de áudio por gravação, e é possível iniciar outra gravação na mesma reunião. Não há dependência de discos temporários de hospedagem nem serviço adicional para rodar localmente.
+
+Ao falhar o envio, a captura é encerrada; os trechos pendentes permanecem na memória desta página para tentar novamente, e os já enviados permanecem no banco. Não feche a aba enquanto o salvamento estiver pendente: o navegador exibirá um aviso, mas não pode garantir a recuperação de trechos ainda não enviados após fechar ou perder energia. Gravações abandonadas preservam áudio parcial; após 10 minutos sem envio, um novo início encerra o registro anterior como interrompido. A reprodução usa streaming com HTTP Range, autenticado e sem cache público.
+
+Transcrição automática, resumo, ata e sugestões de tarefas/prazos aguardam a conexão com IA. A interface identifica essa condição, permite anotações/ata manuais e não envia áudio a provedores externos nem modifica prazos. A futura integração deverá conservar a separação de escritórios e exigir revisão humana antes de aplicar sugestões. O tom Opus em `tests/Fixtures/meeting-tone.webm` é gerado sinteticamente e usado apenas nos testes de integridade/reprodução, sem gravações de pessoas.

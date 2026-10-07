@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.9 — 2026-10-07
+
+- Módulo Reuniões conectado aos eventos do tipo Reunião da agenda, com permissões de consulta e gravação definidas pelo ADM.
+- Ciência dos termos registrada por usuário e versão; confirmação dos participantes antes de cada gravação e aviso visível enquanto o microfone está ativo.
+- Áudio comprimido, mono, enviado em trechos pequenos e armazenado no banco, com reprodução, busca por posição e download autenticados.
+- Envio sequencial idempotente, preservação de trechos salvos, nova tentativa após falhas e aviso ao sair antes de salvar.
+- Anotações e ata manuais, com área para futura transcrição, resumo, ações e sugestões de prazos por IA; nenhum prazo é alterado automaticamente.
+
 ## 0.3.8 — 2026-10-07
 
 - Mensagens com busca de clientes, conversas e registro persistente de textos, respeitando permissões e atribuições.

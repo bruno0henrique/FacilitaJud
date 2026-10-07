@@ -19,12 +19,14 @@
         <header class="page-header">
             <div class="page-heading"><button class="icon-button mobile-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar"><x-icon name="menu"/></button><div>@unless($module === 'prazos')<div class="eyebrow">{{ $office->name }}</div>@endunless<h1>{{ $module === 'painel' ? 'Olá, '.$actor : $modules[$module][0] }}</h1>@unless($module === 'prazos')<p>{{ $module === 'painel' ? ucfirst(now()->translatedFormat('l, d \d\e F')).' · vamos organizar seu dia.' : $modules[$module][1] }}</p>@endunless</div></div>
             <div class="header-actions">
-                @php($createKind = match($module) { 'processos' => 'case', 'clientes' => 'client', 'agenda' => 'appointment', 'prazos' => 'deadline', 'documentos' => 'document', default => 'task' })
+                @php($createKind = match($module) { 'processos' => 'case', 'clientes' => 'client', 'agenda', 'reunioes' => 'appointment', 'prazos' => 'deadline', 'documentos' => 'document', default => 'task' })
                 @php($createLabel = match($createKind) { 'case' => 'Adicionar processo', 'client' => 'Adicionar cliente', 'appointment' => 'Agendar compromisso', 'deadline' => 'Registrar prazo', 'document' => 'Adicionar documento', default => 'Nova tarefa' })
-                @if(!in_array($module, ['equipe', 'mensagens', 'configuracoes']) && ($isAdmin || ($module === 'documentos' && $access->allows(request(), 'documentos.upload'))))<button class="button primary" data-create="{{ $createKind }}"><x-icon name="plus"/> {{ $createLabel }}</button>@endif
+                @if(!in_array($module, ['equipe', 'mensagens', 'configuracoes']) && ($isAdmin || ($module === 'documentos' && $access->allows(request(), 'documentos.upload'))))<button class="button primary" data-create="{{ $createKind }}"><x-icon name="plus"/> {{ $module === 'reunioes' ? 'Agendar reunião' : $createLabel }}</button>@endif
                 <a class="avatar" href="{{ route('workspace', ['module' => 'configuracoes']) }}" aria-label="Perfil e configurações">{{ mb_strtoupper(mb_substr(preg_replace('/^Dra?\.\s*/', '', $office->display_name), 0, 1)) }}{{ mb_strtoupper(mb_substr(collect(explode(' ', $office->name))->last(), 0, 1)) }}</a>
             </div>
         </header>
+
+        @if($module === 'reunioes') @include('partials.meetings') @endif
 
         @if($module === 'painel')
             @php($heroDue = $primaryWork ? \Carbon\Carbon::parse($primaryWork->due_at) : $nextTask?->due_at)
