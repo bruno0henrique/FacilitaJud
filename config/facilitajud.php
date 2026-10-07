@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => '0.3.7',
+    'version' => '0.3.8',
     'trial_enabled' => (bool) env('TRIAL_ENABLED', true),
     'presentation_email' => env('PRESENTATION_EMAIL'),
     'demo' => (bool) env('DEMO_MODE', false),

@@ -1,14 +1,27 @@
 @unless($dialogsOnly ?? false)
+
 <section class="work-queue">
+
     <div class="deadline-overview"><strong>{{ $workTotal - $workCompleted }} <span>obrigações pendentes</span></strong><span class="metadata">{{ $workCompleted }} de {{ $workTotal }} concluídas · {{ \Carbon\Carbon::parse($workDay)->format('d/m/Y') }}</span>@if($workTotal && $workCompleted === $workTotal)<span class="badge green">Tudo em dia</span>@endif</div>
+
     <div class="toolbar work-toolbar"><form method="GET" class="work-filters"><label>Dia<input type="date" name="day" value="{{ $workDay }}"></label><label>Situação<select name="status"><option value="">Todas</option>@foreach(['Pendente','Em andamento','Concluído'] as $status)<option @selected(request('status')===$status)>{{ $status }}</option>@endforeach</select></label><label>Buscar<input name="q" value="{{ request('q') }}" placeholder="Processo ou obrigação"></label><button class="button subtle">Filtrar</button></form>@if($isAdmin)<button class="button primary" id="import-excel">Importar Excel</button>@endif</div>
+
     @if($isAdmin && $workTotal)<div class="work-assignment"><label>Responsável<select id="assign-member">@foreach($members as $member)<option value="{{ $member->id }}">{{ $member->name }}</option>@endforeach</select></label><button class="button subtle" id="assign-work">Atribuir selecionados</button><span class="metadata">Selecione as obrigações da lista abaixo.</span></div>@endif
+
     <section class="surface table-surface"><table class="data-table"><thead><tr>@if($isAdmin)<th><input type="checkbox" id="select-work" aria-label="Selecionar todas nesta página"></th>@endif<th>Obrigação / processo</th><th>Responsável</th><th>Situação</th><th>Prazo</th></tr></thead><tbody>@forelse($workItems as $item)<tr>@if($isAdmin)<td><input type="checkbox" data-work-select value="{{ $item->id }}" aria-label="Selecionar {{ $item->title }}"></td>@endif<td><button class="table-title" data-work-open="{{ $item->id }}">{{ $item->title }}<small>{{ $item->process_number ?: 'Processo não informado' }} @if($item->context) · {{ $item->context }} @endif</small></button></td><td data-label="Responsável">{{ $members->firstWhere('id',$item->assigned_member_id)?->name ?? 'Sem responsável' }}</td><td data-label="Situação"><span class="badge {{ $item->status === 'Concluído' ? 'green' : 'lavender' }}">{{ $item->status }}</span></td><td data-label="Prazo">{{ \Carbon\Carbon::parse($item->due_at)->format('H:i') }}</td></tr>@empty<tr><td colspan="5" class="empty-inline">Nenhuma obrigação para este dia. @if($isAdmin)Importe a planilha e escolha o responsável.@else As obrigações atribuídas a você aparecerão aqui.@endif</td></tr>@endforelse</tbody></table></section>
-    <div class="work-pagination">{{ $workItems->links() }}</div>
+
+    <div class="work-pagination">@include('partials.pagination', ['paginator' => $workItems])</div>
+
     @if($isAdmin && $imports->isNotEmpty())<details class="surface export-list"><summary>Planilhas do escritório · baixar versão atualizada</summary>@foreach($imports as $import)<a class="compact-row" href="{{ route('work.export',$import->id) }}"><span>{{ $import->filename }}</span><span class="text-link">Baixar Excel <x-icon name="download"/></span></a>@endforeach<p class="metadata">O download preserva o arquivo original e acrescenta responsável, situação e andamento. As alterações são salvas no sistema; o arquivo aberto no seu computador precisa ser substituído pela versão baixada.</p></details>@endif
+
 </section>
+
 @endunless
+
 <dialog id="work-dialog" class="app-dialog"><button type="button" class="icon-button dialog-close" aria-label="Fechar">×</button><h2 id="work-title">Atualizar obrigação</h2><p id="work-context" class="metadata"></p><form id="work-form"><label>Situação<select name="status"><option>Pendente</option><option>Em andamento</option><option>Concluído</option></select></label><label>Andamento / conferência<textarea name="note" required maxlength="10000" rows="4" placeholder="Registre o andamento, custas ou providência realizada."></textarea></label><p class="form-error" hidden role="alert"></p><button class="button primary" @disabled(!$access->allows(request(), 'prazos.update'))>Salvar andamento</button></form><h3>Histórico</h3><div id="work-history"></div></dialog>
+
 @if($isAdmin && !($dialogsOnly ?? false))
+
 <dialog id="excel-dialog" class="app-dialog"><button type="button" class="icon-button dialog-close" aria-label="Fechar">×</button><h2>Importar obrigações</h2><p class="metadata">Excel .xlsx · até 10 MB e 10.000 linhas. Confira as colunas antes de distribuir.</p><form id="excel-form"><label>Planilha<input type="file" name="file" accept=".xlsx" required></label><label>Aba<select name="sheet"><option value="">Primeira aba</option></select></label><label>Linha dos títulos<input type="number" name="header_row" value="1" min="1" max="50" required></label><button class="button subtle" type="button" id="preview-excel">Ler e conferir</button><section id="excel-mapping" hidden><p id="excel-count"></p>@foreach(['title'=>'Obrigação','due_at'=>'Data do prazo','process_number'=>'Número do processo (opcional)','context'=>'Contexto / cliente (opcional)'] as $key=>$label)<label>{{ $label }}<select data-excel-column="{{ $key }}" @if(in_array($key,['title','due_at'])) required @endif></select></label>@endforeach<label>Atribuir a<select name="assigned_member_id">@foreach($members as $member)<option value="{{ $member->id }}">{{ $member->name }}</option>@endforeach</select></label><div id="excel-preview" class="metadata"></div><button class="button primary">Importar e distribuir</button></section><p class="form-error" role="alert" hidden></p></form></dialog>
+
 @endif

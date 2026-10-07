@@ -113,6 +113,6 @@ class WorkQueueTest extends TestCase
         $this->postJson('/api/v1/work/assign', ['ids' => DB::table('work_items')->pluck('id')->all(), 'member_id' => $second])->assertOk();
         $this->assertSame(200, DB::table('work_items')->where('assigned_member_id', $second)->count());
         $this->assertSame(200, DB::table('work_item_updates')->count());
-        $this->get('/prazos')->assertOk()->assertViewHas('workTotal', 200)->assertViewHas('workItems', fn ($items) => $items->count() === 50);
+        $this->get('/prazos')->assertOk()->assertViewHas('workTotal', 200)->assertViewHas('workItems', fn ($items) => $items->count() === 25);
     }
 }

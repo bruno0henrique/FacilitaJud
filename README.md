@@ -1,6 +1,6 @@
 # FacilitaJud
 
-Versão **0.3.7** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
+Versão **0.3.8** · Laravel 13 / PHP 8.5 · PostgreSQL · Docker · serviço Python 3.14 opcional.
 
 Sistema jurídico com painel operacional, tarefas, processos, clientes, prazos, agenda e documentos. A identidade pastel e a estrutura modular preservam a referência Lovable; o topo usa **uma ação principal e dois apoios**. Equipe mostra os membros cadastrados; mensagens são uma demonstração, sem envio externo.
 
@@ -93,3 +93,13 @@ A grafia exibida é **FacilitaJud**, inclusive no login e na sidebar. O símbolo
 `php artisan facilitajud:prepare-presentation --demo` acrescenta dados ao escritório local. Para um escritório de conta autenticada previamente autorizado: `php artisan facilitajud:prepare-presentation --email=EMAIL_DO_ADMINISTRADOR`. A carga inclui 24 processos, 48 tarefas, 120 obrigações, 24 documentos de texto, 12 compromissos e 12 prazos, com vínculos e histórico. Uma segunda execução preserva as alterações e não duplica a carga. `PRESENTATION_EMAIL` permite preparar somente o escritório do administrador com esse e-mail ao entrar; mantenha vazio para contas de uso real. Os conteúdos são sintéticos, sem consultas a tribunais ou envio de mensagens. A planilha incluída demonstra a fila de obrigações, sem definir o futuro modelo de importação de processos.
 
 O botão **Testar o programa** cria um escritório isolado por sessão, com dados sintéticos e usuário Demo, sem depender do Neon Auth. Acesso válido por quatro horas, com edições restritas ao próprio escritório. Convites desse ambiente não vinculam contas reais. `TRIAL_ENABLED=false` desabilita a entrada pública; `DEMO_MODE` continua exclusivo do desenvolvimento local.
+
+### Interações dos módulos (0.3.8)
+
+Clientes: 15 registros por página; processos e obrigações: 25, com busca em todas as páginas e navegação em português. Clientes, processos e compromissos podem ser editados pelo ADM; o painel oferece histórico completo de atividades.
+
+Mensagens permite buscar clientes, escolher conversas e registrar textos no próprio escritório. Não há entrega externa nem respostas automáticas. Associados precisam das permissões de consulta e envio e só acessam clientes de processos atribuídos.
+
+Equipe permite editar nome, função, categoria, responsabilidades e acessos, remover e restaurar associados. A remoção revoga sessões existentes sem apagar registros ou histórico. O convidado aparece na equipe antes de aceitar; a aceitação vincula a conta ao mesmo cadastro.
+
+Agenda alterna lista e calendário mensal, com navegação, detalhes e criação por dia. Google Calendar, Apple e Outlook são opções visuais em desenvolvimento. Neo apresenta chat por texto e voz como protótipo visual: não chama IA, não ativa o microfone e não executa alterações.

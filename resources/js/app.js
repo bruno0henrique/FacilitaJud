@@ -69,8 +69,8 @@ function openEditor(kind, record = null) {
     if (!editorDefinitions[kind]) return;
     editorKind = kind;
     editId = record?.id;
-    document.querySelector('#editor-title').textContent = record ? 'Editar tarefa' : editorDefinitions[kind][0];
-    document.querySelector('#editor-submit').textContent = record ? 'Salvar tarefa' : editorDefinitions[kind][1];
+    document.querySelector('#editor-title').textContent = record ? ({task:'Editar tarefa',client:'Editar cliente',case:'Editar processo',appointment:'Editar compromisso'}[kind]) : editorDefinitions[kind][0];
+    document.querySelector('#editor-submit').textContent = record ? 'Salvar alterações' : editorDefinitions[kind][1];
     document.querySelector('#editor-fields').replaceChildren(document.querySelector(`#form-${kind}`).content.cloneNode(true));
     editorForm.querySelectorAll('[data-options]').forEach(select => {
         select.append(document.querySelector(`#${select.dataset.options}-options`).content.cloneNode(true));
@@ -104,7 +104,7 @@ editorForm?.addEventListener('submit', async event => {
     error.hidden = true;
     try {
         const data = new FormData(editorForm);
-        await api(editorKind === 'document' ? '/api/v1/documents' : (editId ? `/api/v1/tasks/${editId}` : `/api/v1/records/${editorKind}`), { method: editId ? 'PATCH' : 'POST', data: editorKind === 'document' ? data : Object.fromEntries(data) });
+        await api(editorKind === 'document' ? '/api/v1/documents' : (editId ? (editorKind === 'task' ? `/api/v1/tasks/${editId}` : `/api/v1/records/${editorKind}/${editId}`) : `/api/v1/records/${editorKind}`), { method: editId ? 'PATCH' : 'POST', data: editorKind === 'document' ? data : Object.fromEntries(data) });
         sessionStorage.setItem('facilitajud-notice', editorDefinitions[editorKind][1].replace(/^(Criar|Adicionar|Salvar|Agendar|Registrar)/, 'Registro salvo:'));
         location.reload();
     } catch (exception) { error.textContent = exception.message; error.hidden = false; }
@@ -163,9 +163,13 @@ async function openDetail(kind, id, editing = false) {
                 content.append(section);
             }
         }
-        if (kind === 'task' && can_edit) {
-            const button = element('button', 'Editar tarefa', 'button subtle');
-            button.addEventListener('click', () => openEditor('task', record)); actions.append(button);
+        if (kind === 'client' && related.cases?.length) {
+            const section = element('section', undefined, 'detail-section'); section.append(element('h3','Processos vinculados'));
+            related.cases.forEach(row => { const button=element('button',row.title,'related-link'); button.addEventListener('click',()=>openDetail('case',row.id)); section.append(button); }); content.append(section);
+        }
+        if (can_edit) {
+            const button = element('button', ({task:'Editar tarefa',client:'Editar cliente',case:'Editar processo',appointment:'Editar compromisso'})[kind], 'button subtle');
+            button.addEventListener('click', () => openEditor(kind, record)); actions.append(button);
         }
         const close = element('button', 'Fechar detalhes', 'button subtle'); close.addEventListener('click', () => detailDialog.close()); actions.append(close);
     } catch (exception) {
@@ -269,12 +273,6 @@ document.querySelector('#settings-form')?.addEventListener('submit', async event
     catch (exception) { error.textContent = exception.message; error.hidden = false; }
     finally { button.disabled = false; }
 });
-document.querySelectorAll('[data-conversation]').forEach(button => button.addEventListener('click', () => {
-    document.querySelectorAll('[data-conversation]').forEach(other => other.classList.toggle('selected', other === button));
-    document.querySelector('#conversation-title').textContent = button.textContent.trim().replace(/^\S+\s*/, '');
-    document.querySelectorAll('[data-message-client]').forEach(message => { message.hidden = message.dataset.messageClient !== button.dataset.conversation; });
-}));
-document.querySelector('[data-conversation]')?.click();
 const notice = sessionStorage.getItem('facilitajud-notice'); if (notice) { sessionStorage.removeItem('facilitajud-notice'); toast(notice); }
 
 const neonUrl = document.querySelector('meta[name="neon-auth-url"]').content;
@@ -345,7 +343,7 @@ if (document.querySelector('#work-dialog')) {
 }
 document.querySelector('#invite-form')?.addEventListener('submit', async event => {
     event.preventDefault(); const form = event.target; const button = form.querySelector('button'); button.disabled = true;
-    try { const data = await api('/api/v1/team/invite', { method: 'POST', data: teamData(form) }); const input = document.querySelector('#invite-url'); input.value = data.url; input.hidden = false; input.select(); document.querySelector('#copy-invite').hidden = false; }
+    try { const data = await api('/api/v1/team/invite', { method: 'POST', data: teamData(form) }); sessionStorage.setItem('facilitajud-invite-url', data.url); sessionStorage.setItem('facilitajud-notice','Associado adicionado à equipe. Compartilhe o convite para ativar o acesso.'); location.reload(); }
     catch (error) { toast(error.message, true); } finally { button.disabled = false; }
 });
 
@@ -412,3 +410,5 @@ trialForm?.addEventListener('submit', async event => {
         button.innerHTML = originalLabel;
     }
 });
+
+if (currentModule) import('./workspace-interactions.js').then(({ setupWorkspaceInteractions }) => setupWorkspaceInteractions({ api, toast, openEditor, dateTime })).catch(() => toast('Recarregue para carregar as interações.', true));

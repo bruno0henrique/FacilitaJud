@@ -13,7 +13,7 @@ class WorkspacePermissions
         'processos.view' => 'Ver processos atribuídos', 'tarefas.view' => 'Ver tarefas atribuídas', 'tarefas.update' => 'Editar e concluir tarefas atribuídas',
         'agenda.view' => 'Ver compromissos atribuídos', 'clientes.view' => 'Ver clientes dos processos atribuídos',
         'documentos.view' => 'Baixar documentos dos processos atribuídos', 'documentos.upload' => 'Adicionar documentos aos processos atribuídos',
-        'equipe.view' => 'Ver minha categoria e responsabilidades', 'mensagens.view' => 'Ver conversas dos clientes atribuídos',
+        'equipe.view' => 'Ver minha categoria e responsabilidades', 'mensagens.view' => 'Ver conversas dos clientes atribuídos', 'mensagens.send' => 'Registrar mensagens nas conversas',
     ];
 
     public const DEFAULTS = ['prazos.view', 'prazos.update'];

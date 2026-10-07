@@ -45,7 +45,7 @@ class WorkQueueController extends Controller
         $data = $request->validate(['sheet' => 'required|string|max:255', 'header_row' => 'required|integer|min:1|max:50',
             'mapping.title' => 'required|regex:/^[A-Z]{1,3}$/', 'mapping.due_at' => 'required|regex:/^[A-Z]{1,3}$/',
             'mapping.process_number' => 'nullable|regex:/^[A-Z]{1,3}$/', 'mapping.context' => 'nullable|regex:/^[A-Z]{1,3}$/',
-            'assigned_member_id' => ['required', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))]]);
+            'assigned_member_id' => ['required', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))->where('active', true)]]);
         $import = DB::table('spreadsheet_imports')->where('office_id', $request->attributes->get('office_id'))->find($id);
         abort_unless($import, 404);
         $read = $excel->run(['action' => 'read', 'contents' => $import->contents, 'sheet' => $data['sheet'], 'header_row' => $data['header_row']]);
@@ -118,7 +118,7 @@ class WorkQueueController extends Controller
     public function assign(Request $request): JsonResponse
     {
         $this->admin($request);
-        $data = $request->validate(['ids' => 'required|array|min:1|max:10000', 'ids.*' => 'required|integer|distinct', 'member_id' => ['required', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))]]);
+        $data = $request->validate(['ids' => 'required|array|min:1|max:10000', 'ids.*' => 'required|integer|distinct', 'member_id' => ['required', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))->where('active', true)]]);
         DB::transaction(function () use ($request, $data): void {
             $items = $this->query($request)->whereIn('id', $data['ids'])->lockForUpdate()->get();
             abort_unless($items->count() === count($data['ids']), 404);

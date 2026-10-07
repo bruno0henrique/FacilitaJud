@@ -47,9 +47,11 @@ class TeamController extends Controller
         $member = (clone $q)->first();
         abort_unless($member, 404);
         abort_if($member->account_type === 'admin', 403, 'O administrador mantém o acesso completo ao escritório.');
-        $data = $request->validate($this->rules($request));
-        $q->update(['category_id' => $data['category_id'] ?? null, 'responsibilities' => $data['responsibilities'] ?? null,
-            'permissions' => isset($data['permissions']) ? json_encode($data['permissions']) : null, 'updated_at' => now()]);
+        $data = $request->validate($this->rules($request) + ['name' => 'sometimes|required|string|max:120', 'role' => 'sometimes|required|string|max:120', 'active' => 'sometimes|boolean']);
+        if (array_key_exists('permissions', $data) && $data['permissions'] !== null) {
+            $data['permissions'] = json_encode(array_values(array_unique($data['permissions'])));
+        }
+        $q->update($data + ['updated_at' => now()]);
 
         return response()->json(['message' => 'Acessos e responsabilidades atualizados.']);
     }
@@ -58,10 +60,13 @@ class TeamController extends Controller
     {
         $this->admin($request);
         $data = $request->validate($this->rules($request) + ['name' => 'required|string|max:120', 'email' => 'required|email|max:200']);
+        abort_if(DB::table('members')->where('office_id', $request->attributes->get('office_id'))->where('email', $data['email'])->where('account_type', 'admin')->exists(), 422, 'Este e-mail já é do administrador.');
         $token = Str::random(64);
         DB::table('team_invitations')->insert(['office_id' => $request->attributes->get('office_id'), 'name' => $data['name'], 'email' => $data['email'],
             'category_id' => $data['category_id'] ?? null, 'responsibilities' => $data['responsibilities'] ?? null, 'permissions' => isset($data['permissions']) ? json_encode($data['permissions']) : null,
             'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7), 'created_at' => now(), 'updated_at' => now()]);
+
+        DB::table('members')->updateOrInsert(['office_id' => $request->attributes->get('office_id'), 'email' => $data['email']], ['name' => $data['name'], 'account_type' => 'associate', 'role' => 'Associado(a)', 'active' => true, 'category_id' => $data['category_id'] ?? null, 'responsibilities' => $data['responsibilities'] ?? null, 'permissions' => isset($data['permissions']) ? json_encode($data['permissions']) : null, 'updated_at' => now()]);
 
         return response()->json(['url' => route('login', ['convite' => $token]), 'message' => 'Convite de associado criado. Compartilhe o link com o destinatário.']);
     }
@@ -72,7 +77,7 @@ class TeamController extends Controller
         $table = match ($kind) {
             'case' => abort(422, 'A atribuição de processos será feita por planilha. O modelo está em definição.'),'task' => 'tasks','appointment' => 'appointments',default => abort(404)
         };
-        $data = $request->validate(['assigned_member_id' => ['nullable', 'integer', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))]]);
+        $data = $request->validate(['assigned_member_id' => ['nullable', 'integer', Rule::exists('members', 'id')->where('office_id', $request->attributes->get('office_id'))->where('active', true)]]);
         $q = DB::table($table)->where('office_id', $request->attributes->get('office_id'))->where('id', $id);
         abort_unless((clone $q)->exists(), 404);
         $values = ['assigned_member_id' => $data['assigned_member_id'] ?? null, 'updated_at' => now()];

@@ -76,7 +76,12 @@ class AuthController extends Controller
                 $existing = DB::table('members')->where('provider_id', $claims->sub)->first();
                 abort_if($existing && $existing->office_id !== $invite->office_id, 409, 'Esta conta já pertence a outro escritório. Use o e-mail convidado para uma nova conta.');
                 if (! $existing) {
-                    DB::table('members')->insert(['office_id' => $invite->office_id, 'provider_id' => $claims->sub, 'name' => $invite->name, 'email' => $invite->email, 'role' => 'Associado(a)', 'account_type' => 'associate', 'category_id' => $invite->category_id, 'permissions' => $invite->permissions, 'responsibilities' => $invite->responsibilities, 'created_at' => now(), 'updated_at' => now()]);
+                    $pending = DB::table('members')->where('office_id', $invite->office_id)->where('email', $invite->email)->whereNull('provider_id')->first();
+                    if ($pending) {
+                        DB::table('members')->where('id', $pending->id)->update(['provider_id' => $claims->sub]);
+                    } else {
+                        DB::table('members')->insert(['office_id' => $invite->office_id, 'provider_id' => $claims->sub, 'name' => $invite->name, 'email' => $invite->email, 'role' => 'Associado(a)', 'account_type' => 'associate', 'category_id' => $invite->category_id, 'permissions' => $invite->permissions, 'responsibilities' => $invite->responsibilities, 'created_at' => now(), 'updated_at' => now()]);
+                    }
                 }
                 DB::table('team_invitations')->where('id', $invite->id)->update(['accepted_at' => now()]);
             }
@@ -93,6 +98,7 @@ class AuthController extends Controller
                 ]);
             }
         });
+        abort_unless(DB::table('members')->where('provider_id', $claims->sub)->value('active'), 403, 'Seu acesso ao escritório foi removido.');
         $request->session()->regenerate();
         $request->session()->forget('trial_workspace');
         $request->session()->put('identity', ['id' => $claims->sub, 'expires_at' => $claims->exp]);

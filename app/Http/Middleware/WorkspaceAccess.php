@@ -59,7 +59,7 @@ class WorkspaceAccess
                 : redirect()->route('login');
         }
         $member = DB::table('members')->where('provider_id', $request->session()->get('identity.id'))->first();
-        abort_unless($member, 403);
+        abort_unless($member && $member->active, 403, 'Seu acesso ao escritório foi removido.');
         $request->attributes->set('office_id', $member->office_id);
         $request->attributes->set('actor', $member->name);
         $request->attributes->set('demo', false);

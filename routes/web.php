@@ -14,6 +14,9 @@ Route::post('/auth/neon/{action}', [AuthController::class, 'action'])->whereIn('
 Route::post('/sair', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(WorkspaceAccess::class)->group(function (): void {
+    Route::post('/api/v1/messages', [WorkspaceController::class, 'message']);
+    Route::get('/api/v1/activities', [WorkspaceController::class, 'activities']);
+    Route::patch('/api/v1/records/{kind}/{id}', [WorkspaceController::class, 'update']);
     Route::post('/api/v1/work/preview', [WorkQueueController::class, 'preview']);
     Route::post('/api/v1/work/import/{id}', [WorkQueueController::class, 'import']);
     Route::post('/api/v1/work/assign', [WorkQueueController::class, 'assign']);

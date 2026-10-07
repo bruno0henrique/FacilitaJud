@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.8 — 2026-10-07
+
+- Mensagens com busca de clientes, conversas e registro persistente de textos, respeitando permissões e atribuições.
+- Calendário mensal com navegação, lista, abertura e edição de compromissos e opções visuais Google, Apple e Outlook.
+- Neo com interface de texto e voz em desenvolvimento, sem conexão com IA ou microfone.
+- Histórico completo do painel e edição de clientes, processos e compromissos pelo administrador.
+- Equipe com edição de função, nome e condições, acessos permitidos/bloqueados, remoção e restauração sem apagar histórico; convite vinculado ao cadastro existente.
+- Clientes limitados a 15 registros; processos e obrigações a 25, busca geral e paginação em português.
+
 ## 0.3.7 — 2026-10-07
 
 - Botão Testar o programa no login, com carregamento, usuário Demo e escritório preenchido isolado por sessão, disponível localmente e em produção sem Neon Auth.
