@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 — 2026-10-07
+
+- Renova a sessão considerando o vencimento do token, inclusive depois de navegar entre módulos, sem duplicar chamadas em andamento.
+- Adiciona teste da renovação em navegação, alternância de abas e demonstração.
+
 ## 0.3.2 — 2026-10-07
 
 - Reduz consultas por módulo; Equipe deixa de carregar processos, documentos, mensagens e filas não utilizadas.

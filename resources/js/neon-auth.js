@@ -46,17 +46,23 @@ export async function setupNeonAuth({ api, toast, currentModule }) {
         } catch (error) { toast(error.message, true); }
     });
     if (currentModule && document.querySelector('meta[name="neon-session-active"]')?.content === '1') {
-        let lastRefresh = Date.now();
+        const expiresAt = Number(document.querySelector('meta[name="neon-session-expires-at"]')?.content || 0) * 1000;
+        let refreshAfter = expiresAt ? expiresAt - 5 * 60 * 1000 : Date.now() + 10 * 60 * 1000;
+        let lastAttempt = 0;
         let refreshing = false;
         const refresh = async () => {
-            if (document.hidden || refreshing || Date.now() - lastRefresh < 5 * 60 * 1000) return;
+            if (document.hidden || refreshing || Date.now() < refreshAfter || Date.now() - lastAttempt < 60 * 1000) return;
             refreshing = true;
-            lastRefresh = Date.now();
-            try { await api('/auth/neon/refresh', { method: 'POST', data: {} }); }
+            lastAttempt = Date.now();
+            try {
+                await api('/auth/neon/refresh', { method: 'POST', data: {} });
+                refreshAfter = Date.now() + 10 * 60 * 1000;
+            }
             catch (error) { toast(error.message, true); }
             finally { refreshing = false; }
         };
-        setInterval(refresh, 10 * 60 * 1000);
+        setInterval(refresh, 60 * 1000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+        refresh();
     }
 }

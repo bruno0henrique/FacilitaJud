@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="neon-auth-url" content="{{ config('facilitajud.neon_url') }}">
     <meta name="neon-session-active" content="{{ session()->has('identity') && session()->has('neon_cookies') ? '1' : '0' }}">
+    <meta name="neon-session-expires-at" content="{{ session('identity.expires_at', 0) }}">
     <title>@yield('title', 'FacilitaJud') · FacilitaJud</title>
     <link rel="icon" href="{{ asset('brand/facilitajud-icon.png') }}" type="image/png">
     <link rel="preload" href="{{ asset('fonts/Satoshi-Variable.woff2') }}" as="font" type="font/woff2" crossorigin>
