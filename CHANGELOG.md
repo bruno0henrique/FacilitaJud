@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12 — 2026-10-08
+
+- Build Docker local e Vercel reutiliza mbstring, sodium e curl da imagem oficial PHP, evitando recompilação redundante e os avisos de extensões já carregadas.
+
 ## 0.3.11 — 2026-10-07
 
 - Sincronização da lista de gravações após salvar no pop-up, ao retornar à tela ou abrir uma reunião, sem descartar anotações pendentes ou interromper reprodução.

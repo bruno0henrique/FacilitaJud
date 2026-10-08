@@ -7,8 +7,8 @@ COPY vite.config.js ./
 RUN npm run build
 
 FROM php:8.5-apache AS base
-RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev libonig-dev libzip-dev libicu-dev libsodium-dev libcurl4-openssl-dev python3 ca-certificates unzip \
-    && docker-php-ext-install pdo_pgsql mbstring zip intl sodium bcmath curl \
+RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev libzip-dev libicu-dev python3 ca-certificates unzip \
+    && docker-php-ext-install pdo_pgsql zip intl bcmath \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 RUN a2enmod deflate
